@@ -6,7 +6,7 @@ import type {
   CatAnim, LevelData, MessKind, MinigameKind, PropKind, Role, RoomId, SitterVisualState, SoundName,
   Spot, SpotId, FxKind, Vec3, WorldVisualValue, DoorDef,
 } from '../../shared/contracts';
-import type { CharState, Mess, StatusKey, Stats } from '../../core/types';
+import type { CharState, Difficulty, Mess, StatusKey, Stats } from '../../core/types';
 
 /** Characters are plain mutable state objects (also what the snapshot sends). */
 export type Char = CharState;
@@ -25,6 +25,10 @@ export interface SimContext {
   readonly time: number;
   readonly timeLeft: number;
   readonly level: LevelData;
+  /** bot difficulty of this round (optional until P1 wires it; default 'houseCat') */
+  readonly difficulty?: Difficulty;
+  /** cat count 1..4, fixed at round start (P1) */
+  readonly n?: number;
   rng(): number;
   spot(id: SpotId): Spot;
   roomAt(p: Vec3): RoomId | null;
@@ -61,8 +65,9 @@ export interface SimContext {
   addMess(kind: MessKind, p: Vec3, opts?: { by?: string; scale?: number; mul?: number; yaw?: number }): number;
   removeMess(id: number): void;
   messes(): readonly Mess[];
-  /** permanent disaster points (never cleanable). Shows a popup with the label. */
-  addPermanent(points: number, label: string, by?: string): void;
+  /** permanent disaster points (never cleanable). Shows a popup with the label. spot = receipt/end-show key (sim infers it
+   *  from the running interactable when omitted) and the sim splits disasterPoints over every cat that worked on it. */
+  addPermanent(points: number, label: string, by?: string, spot?: SpotId): void;
   /** ongoing meter contribution while set (e.g. full litter box = 4). 0 removes it. */
   setPenalty(key: string, points: number): void;
 
@@ -90,8 +95,8 @@ export interface SimContext {
   popup(text: string, to?: Role | string, color?: string): void;
   /** floating world-space text */
   text(text: string, p: Vec3, color?: string): void;
-  /** sitter HUD alert (room name + marker through walls). Same id updates it. */
-  alert(id: string, on: boolean, label?: string, p?: Vec3): void;
+  /** sitter HUD alert (room name + marker through walls). Same id updates it. progress = 0..1 ring (ADDENDUM 2.0). */
+  alert(id: string, on: boolean, label?: string, p?: Vec3, progress?: number): void;
 
   /** raw progress store (keys are interaction keys) */
   progress(key: string): number;
@@ -130,6 +135,8 @@ export interface Use<S> {
   onProgress?(ctx: SimContext, s: S, ch: Char, progress: number): void;
   onStop?(ctx: SimContext, s: S, ch: Char, completed: boolean): void;
   onComplete(ctx: SimContext, s: S, ch: Char): void;
+  /** the sitter's Undo reset this use's progress to 0 (ch = the sitter) */
+  onUndo?(ctx: SimContext, s: S, ch: Char): void;
   /** cat uses only: label of the sitter's generic Undo for this use (ADDENDUM M6), e.g. "Close the laptop" */
   undo?: string;
 }

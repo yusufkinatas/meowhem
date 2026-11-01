@@ -1,4 +1,5 @@
 import { defineInteractable } from './registry';
+import { disaster } from './common';
 
 const STAGES = 3;
 
@@ -10,7 +11,7 @@ defineInteractable({
   uses: [
     {
       role: 'cat', mode: 'hold', time: 6, shared: true, alert: 'Sofa', anim: 'scratch', face: 'focused',
-      label: (ctx, s) => `Scratch the sofa (${s.stage + 1}/${STAGES})`,
+      label: 'Scratch the sofa', undo: 'Flip the cushion', // undo resets only the current stage
       check: (ctx, s) => s.stage < STAGES,
       onStart(ctx, s) {
         if (s.workers++ === 0) ctx.loop('sofa', 'scratch', true, ctx.spot('sofa').pos);
@@ -18,11 +19,13 @@ defineInteractable({
       onStop(ctx, s) {
         if (--s.workers <= 0) { s.workers = 0; ctx.loop('sofa', 'scratch', false); }
       },
-      onComplete(ctx, s, ch) {
+      onComplete(ctx, s) {
         s.stage++;
         ctx.setWorld('sofa.shred', s.stage);
         ctx.fx('scratchMarks', ctx.spot('sofa').pos);
-        ctx.addPermanent(4, s.stage === STAGES ? 'Sofa: ruined' : 'Sofa scratched', ch.id);
+        const label = `SOFA ${s.stage}/${STAGES}`;
+        if (s.stage === STAGES) disaster(ctx, 'sofa', label, 4);
+        else ctx.addPermanent(4, label, undefined, 'sofa');
       },
     },
   ],

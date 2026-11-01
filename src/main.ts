@@ -29,6 +29,7 @@ const input = new Input(canvas);
 const audio = createAudio();
 const profile = loadProfile();
 const menu = new Menu(ui, profile, saveProfile);
+menu.sfx = (n) => audio.play(n);
 
 interface Session {
   host: HostSession | null;
@@ -111,7 +112,7 @@ function startSolo(role: Role) {
 
 async function startHost() {
   teardown();
-  menu.message('Opening a room...', 'Talking to the matchmaking server.');
+  menu.message('Opening a room', 'Talking to the matchmaking server.');
   try {
     const peer = await createPeerHost();
     const host = newHost(true);
@@ -128,7 +129,7 @@ async function startJoin(raw: string) {
   const code = normalizeCode(raw);
   if (code.length !== 4) { menu.error('Room codes are 4 letters.'); return; }
   teardown();
-  menu.message(`Joining ${code}...`, 'Knocking on the door.');
+  menu.message(`Joining ${code}`, 'Knocking on the door.');
   try {
     const pc = await joinPeerHost(code);
     attach(pc.link, null, true, null, pc.destroy);
@@ -171,12 +172,12 @@ function startClient(s: Session, cfg: GameConfig) {
   menu.hide();
   const level = s.host && sharedLevel ? sharedLevel : buildLevel();
   s.client = new ClientGame({
-    link: s.link, myId: s.myId, cfg, level, isHost: !!s.host, audio, renderer, input, ui,
+    link: s.link, myId: s.myId, cfg, level, isHost: !!s.host, online: s.online, audio, renderer, input, ui,
     onLeave: () => toTitle(),
-    onAgain: () => {
-      if (!s.host) return;
-      if (s.solo) s.host.start();
-      else s.host.backToLobby();
+    onAgain: () => s.host?.start(),
+    onLobby: () => {
+      if (s.host && s.online) s.host.backToLobby();
+      else toTitle();
     },
   });
   if (DEBUG) debug = createDebug(renderer.scene, level, () => s.host?.sim?.world ?? s.client!.sw.world, () => s.client?.fps ?? 0);

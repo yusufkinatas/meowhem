@@ -1,94 +1,107 @@
 import type { MinigameHost } from '../shared/contracts';
-import { type Game, frame, el, img, place, paw, furOf, pop, burst, fake, tap, LEFT, RIGHT, rand, clamp } from './kit';
+import { type Game, frame, el, img, place, paw, furOf, pop, burst, fake, gate, tap, rand, clamp, OTHER_FUR } from './kit';
 
-const SWATS = 44;
-// roll_of_paper.svg drawn at W px; the hanging sheet's bottom edge spans units 5..23 at y 29.5
-const W = 200, X0 = 300, Y0 = 12, U = W / 32;
+// ADDENDUM 4.3: each pull +2.2 rad/s (cap 14), friction 3 rad/s², progress = spin x 0.011 per second
+const KICK = 2.2, MAX_SPIN = 14, FRICTION = 3, RATE = 0.011, RIP = 0.03, RIP_GAP = 0.12;
+// roll_of_paper.svg drawn W px; the hanging sheet's bottom edge spans units 5.2..22.8 at y 29.2
+const W = 230, X0 = 300, Y0 = -12, U = W / 32;
 const SHEET = { x: X0 + 5.2 * U, w: 17.6 * U, y: Y0 + 29.2 * U };
-const FLOOR = 430;
-const HIT = { x: X0 + 13 * U, y: Y0 + 14 * U };
+const PULL = ['KeyS', 'ArrowDown'];
 
 export function tpSpin(host: MinigameHost): Game {
-  const f = frame(host, 'tpSpin', 'Unroll', [[['A', '←'], 'left paw'], [['D', '→'], 'right paw'], [[], 'alternate, fast']]);
+  const f = frame(host, 'tpSpin', 'Unroll it', [[['S', '↓', 'Wheel'], 'pull']]);
   const { stage } = f;
   const fur = furOf(host);
+  const mid = SHEET.x + SHEET.w / 2;
 
-  place(el('div', 'tp-plate', stage), X0 + 27 * U, Y0 + 6 * U, 46, 78);
-  place(el('div', 'tp-arm', stage), X0 + 24 * U, Y0 + 10.4 * U, 62, 16);
   const roll = place(img('roll_of_paper', 'tp-roll', stage), X0, Y0, W, W);
-  const strip = place(el('div', 'tp-strip', stage), SHEET.x, SHEET.y, SHEET.w, 0);
+  const strip = place(el('div', 'tp-strip', stage), SHEET.x, SHEET.y - 2, SHEET.w, 460);
+  const arcs = [place(el('div', 'tp-arc', stage), X0 - 26, Y0 + 50, 60, 120), place(el('div', 'tp-arc r', stage), X0 + W - 30, Y0 + 50, 60, 120)];
+  // the pile: paper folds heaped up, growing past the bottom edge
   const pile = el('div', 'tp-pile', stage);
-  const mound = place(el('div', 'tp-mound', pile), SHEET.x + SHEET.w / 2 - 230, FLOOR - 110, 460, 170);
-  const loops: HTMLElement[] = [];
-  // the sheet folds over itself into a heap: stacked, skewed paper folds, a few sliding off
-  for (let i = 0; i < 26; i++) {
-    const w = SHEET.w * rand(0.95, 1.35), h = rand(20, 26);
-    const slide = i % 5 === 4 ? rand(80, 170) * (Math.random() < 0.5 ? -1 : 1) : rand(-40, 40) * (1 + i / 14);
-    const x = SHEET.x + SHEET.w / 2 + slide - w / 2;
-    const y = FLOOR - 24 - i * 6.5 - (Math.abs(slide) > 60 ? -i * 4 : 0);
-    const e = place(el('div', 'tp-loop', pile), x, y, w, h);
-    e.style.rotate = `${rand(-12, 12) + (Math.abs(slide) > 60 ? Math.sign(slide) * 18 : 0)}deg`;
-    loops.push(e);
+  const folds: HTMLElement[] = [];
+  const mound = place(el('div', 'tp-mound', pile), mid - 260, 250, 520, 240);
+  for (let i = 0; i < 54; i++) {
+    // loops of streamer heaped into a mound
+    const r = i / 54, w = rand(70, 130), h = w * rand(0.45, 0.8);
+    const x = mid - w / 2 + rand(-1, 1) * 280 * (1 - r * 0.78);
+    const e = place(el('div', 'tp-fold', pile), x, 420 - r * 220 + rand(-10, 10) - h / 2, w, h);
+    e.style.rotate = `${rand(-40, 40) + (Math.random() < 0.35 ? 180 : 0)}deg`;
+    folds.push(e);
   }
-  const arcs = [place(el('div', 'tp-arc', stage), X0 - 34, Y0 + 30, 60, 120), place(el('div', 'tp-arc r', stage), X0 + W - 20, Y0 + 30, 60, 120)];
+  const me = paw('back', fur, 'tp-paw claws');
+  stage.appendChild(me);
+  place(me, mid - 62, 236, 124, 174);
+  const buddy = paw('back', OTHER_FUR, 'tp-paw tp-buddy claws');
+  stage.appendChild(buddy);
+  place(buddy, mid + 60, 250, 110, 154);
+  buddy.style.rotate = '-24deg';
 
-  const paws = [paw('beans', fur, 'tp-paw'), paw('beans', fur, 'tp-paw')];
-  const home = [{ x: 190, y: 255, r: 22 }, { x: 630, y: 255, r: -22 }];
-  paws.forEach((p, i) => { stage.appendChild(p); place(p, home[i].x - 70, home[i].y, 140, 196); p.style.rotate = `${home[i].r}deg`; });
+  const cap = gate(1 / 0.06);
+  let spin = 0, scroll = 0, lastPull = -9, lastRip = -9, shown = 0, whooshT = 0, buddyT = 0, botT = 0, gone = false, t = 0;
 
-  let last = -1, roll_v = 0, scroll = 0, shown = 0, botT = 0, botSide = 0, combo = 0, idle = 0;
-
-  function swat(i: number): void {
-    const dx = HIT.x - home[i].x, dy = HIT.y - home[i].y;
-    paws[i].animate({ translate: ['0 0', `${dx * 0.7}px ${dy * 0.7}px`, '0 0'], scale: ['1', '0.9', '1'] },
-      { duration: 200, easing: 'cubic-bezier(.3,.8,.4,1)' });
-    const good = i !== last;
-    last = i;
-    roll_v += good ? 1 : 0.3;
-    roll.animate({ rotate: ['0deg', `${i ? -4 : 4}deg`, '0deg'], translate: ['0 0', '0 5px', '0 0'] }, { duration: 180 });
-    arcs[i].classList.remove('on');
-    void arcs[i].offsetWidth;
-    arcs[i].classList.add('on');
-    if (!good) return;
-    combo++;
-    idle = 0;
-    host.progress(1 / SWATS);
-    f.sound(combo % 3 ? 'whoosh' : 'paperRip');
-    burst(stage, HIT.x + rand(-30, 30), SHEET.y, { cls: 'tp-bit', n: 3, size: 16, spread: 70, up: 10, fall: 120, ms: 900 });
+  function pull(): void {
+    if (f.locked() || !cap()) return;
+    if (t - lastPull < RIP_GAP && t - lastRip > 1) {
+      lastRip = t;
+      f.report(RIP);
+      f.sound('paperRip');
+      burst(stage, mid + rand(-30, 30), 300, { cls: 'tp-bit', n: 5, size: 26, spread: 160, up: 60, fall: 180, ms: 1100 });
+    }
+    lastPull = t;
+    spin = Math.min(MAX_SPIN, spin + KICK);
+    me.animate({ translate: ['0 0', '0 54px', '0 0'], scale: ['1', '.94 1.04', '1'] }, { duration: 230, easing: 'cubic-bezier(.3,.8,.4,1)' });
+    roll.animate({ translate: ['0 0', '0 6px', '0 0'] }, { duration: 160 });
   }
+
+  const wheel = (e: WheelEvent) => { if (e.deltaY) { f.flash('Wheel'); pull(); } };
+  host.container.addEventListener('wheel', wheel, { passive: true });
 
   return {
     update(dt) {
-      const p = f.tick();
-      idle += dt;
-      if (idle > 0.6) combo = 0;
-      roll_v *= Math.exp(-dt * 3);
-      scroll += roll_v * dt * 260;
+      const p = f.tick(dt);
+      t += dt;
+      spin = Math.max(0, spin - FRICTION * dt);
+      if (p < 0.999) f.stream(spin * RATE * dt);
+      scroll += spin * 42 * dt;
       strip.style.backgroundPositionY = `${scroll}px`;
-      const len = clamp(p / 0.35) * (FLOOR - SHEET.y);
-      strip.style.height = `${len}px`;
-      const want = Math.floor(clamp((p - 0.3) / 0.7) * loops.length);
-      mound.style.transform = `scale(${clamp((p - 0.3) / 0.7)})`;
-      while (shown < want) { loops[shown].classList.add('on'); pop(loops[shown], 1.15); shown++; }
-      if (p >= 0.999 && !roll.classList.contains('done')) {
-        roll.classList.add('done');
+      roll.style.rotate = `${Math.sin(t * spin * 2) * spin * 0.12}deg`;
+      for (const a of arcs) a.style.opacity = `${clamp((spin - 6) / 6) * (0.6 + Math.sin(t * 30) * 0.3)}`;
+      whooshT -= dt;
+      if (spin > 8 && whooshT < 0) { whooshT = 0.5; f.sound('whoosh', { volume: 0.4 }); }
+      const want = Math.floor(clamp(p * 1.05) * folds.length);
+      while (shown < want) { folds[shown].classList.add('on'); pop(folds[shown], 1.12, 180); shown++; }
+      pile.style.translate = `0 ${-p * 40}px`;
+      mound.style.scale = `${clamp(p * 1.1)}`;
+      // another cat pulling too
+      if (f.helpers() > 0 && p < 0.999) {
+        buddyT -= dt;
+        buddy.classList.add('on');
+        if (buddyT < 0) { buddyT = rand(0.3, 0.5); buddy.animate({ translate: ['0 0', '0 46px', '0 0'] }, { duration: 240 }); }
+      } else buddy.classList.remove('on');
+      if (p >= 0.999 && !gone) {
+        gone = true;
         f.sound('paperRip');
-        burst(stage, SHEET.x + SHEET.w / 2, 300, { cls: 'tp-bit', n: 16, size: 22, spread: 260, up: 120, fall: 200, ms: 1300 });
+        strip.classList.add('cut');
+        roll.animate({ translate: ['0 0', '80px 40px', '640px 300px'], rotate: ['0deg', '200deg', '900deg'], scale: ['1', '.62', '.5'] },
+          { duration: 1100, easing: 'cubic-bezier(.4,0,.8,.6)', fill: 'forwards' });
+        burst(stage, mid, 260, { cls: 'tp-bit', n: 14, size: 24, spread: 280, up: 120, fall: 220, ms: 1300 });
       }
     },
     key(e, down) {
-      const l = LEFT.includes(e.code), r = RIGHT.includes(e.code);
-      if (!l && !r) return false;
-      if (tap(e, down, ...LEFT, ...RIGHT)) { f.flash(e.code); swat(l ? 0 : 1); }
+      if (!PULL.includes(e.code)) return false;
+      if (tap(e, down, ...PULL)) { f.flash(e.code); pull(); }
       return true;
     },
     bot(dt) {
       botT -= dt;
       if (botT > 0) return;
-      botT = rand(0.14, 0.26);
-      botSide = Math.random() < 0.94 ? botSide ^ 1 : botSide;
-      this.key(fake(botSide ? 'KeyD' : 'KeyA'), true);
+      // steady pulls with the odd quick double for a rip
+      const dbl = t - lastRip > 1.2 && Math.random() < 0.3;
+      botT = dbl ? 0.08 : rand(0.26, 0.34);
+      this.key(fake('KeyS'), true);
     },
-    dispose: () => f.dispose(),
+    finish() { f.finish(); },
+    dispose: () => { host.container.removeEventListener('wheel', wheel); f.dispose(); },
   };
 }

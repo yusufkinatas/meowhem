@@ -1,4 +1,4 @@
-/** v1 tuning (DESIGN.md section 3). Playtest and tweak here. */
+/** Tuning (DESIGN.md section 3 + ADDENDUM v2 section 3). Playtest and tweak here. */
 export const CFG = {
   tick: 1 / 60,
   snapHz: 20,
@@ -6,7 +6,7 @@ export const CFG = {
   interpDelay: 0.1,
   gravity: 10,
 
-  round: { seconds: 360, options: [180, 360, 540], countdown: 3, endDelay: 3 },
+  round: { seconds: 360, options: [180, 360, 540], countdown: 3, endDelay: 0.2 },
 
   cat: {
     walk: 3.2, sprint: 5.8, stamina: 4, staminaRegen: 1, regenDelay: 1,
@@ -18,30 +18,46 @@ export const CFG = {
     jumpV: 2.83, radius: 0.28, halfHeight: 0.595, step: 0.3,
   },
 
-  grab: { range: 1.4, coneDeg: 70, limp: 0.8, escapePresses: 14, hissBonus: 4, carryMul: 0.9, immunity: 3 },
-  carrier: { time: 20, unlatch: 2.5, mashCut: 0.25, mashMaxCut: 8 },
-  spray: { ammo: 8, range: 3.5, coneDeg: 25, stun: 1.0, wet: 5, wetMul: 0.6, refill: 2, cooldown: 0.35 },
-  tv: { cooldown: 75, duration: 15, range: 9, mash: 10 },
+  grab: {
+    range: 1.4, coneDeg: 70, limp: 1.0, escapePresses: 20, hissBonus: 4, carryMul: 1.0, immunity: 3,
+    noodleAfter: 2.0, noodleCarry: 0.6, noodleExit: 4, reblock: 15,
+  },
+  /** mashMaxCut: fraction of the time-out that rattling can cut */
+  carrier: { time: 20, unlatch: 2.5, mashCut: 0.25, mashMaxCut: 0.4, mashUnits: 20 },
+  spray: { ammo: 8, range: 3.5, coneDeg: 25, stun: 0.7, wet: 5, wetMul: 0.6, refill: 2, cooldown: 0.35, noLoaf: 6 },
+  emptySpray: { range: 6, coneDeg: 60, smug: 2, toastEvery: 10 },
+  tv: { cooldown: 75, duration: 8, range: 9, mash: 8 },
   treats: { cooldown: 40, range: 14, prompt: 6, eatRange: 1.5, fed: 20, freeze: 1.2 },
   poop: {
     fillMin: 50, fillMax: 70, desperateMul: 0.8, anywhereAfter: 15, hold: 2,
     zoomies: 5, zoomiesMul: 1.3, boxCapacity: 4, fullPenalty: 4, scoop: 2.5, litterKickChance: 0.5,
   },
-  hairball: { cooldown: 60, hack: 2, doubleTap: 0.35 },
+  hairball: { cooldown: 90, hack: 2, hold: 0.6, creep: 0.3, steerDeg: 100, hearRange: 6 },
   blackout: { flip: 1.5, reset: 2, cooldown: 45, catWorkMul: 1.15 },
   buffs: {
     fedWork: 1.25, fedTime: 30, catnipMove: 1.25, catnipWork: 1.25, catnipTime: 25,
     sunRegenMul: 3, focusedWork: 1.15, sinkFed: 10,
   },
-  fight: { window: 1.5, range: 2, lock: 4, crown: 10, dizzy: 1.5 },
-  eye: { dot: 0.9, range: 12 },
+  fight: {
+    window: 1.5, range: 2, lock: 4, stare: 1.5, crown: 10, dizzy: 1.5, flinchMul: 0.75, press: 0.025,
+    drift: 0.8, turnEvery: 0.8, propRange: 0.6, propOut: 2.5, propUp: 1.5, groom: 1.5,
+  },
+  eye: { dot: 0.9, range: 12, max: 3, window: 10 },
   door: { catOpen: 2 },
   props: {
     breakSpeed: 2.6, fallenDrop: 0.3, restSpeed: 0.15, restTime: 0.4, tidyTime: 1,
     swipeRange: 0.85, swipeSpeed: 2.8, swipeUp: 1.3, swipeCooldown: 0.45, touchMemory: 4,
   },
   interact: { range: 1.2, cleanRange: 1.15, sitBlockRange: 0.55 },
-  meow: { spamCount: 4, spamWindow: 5, spamRange: 4 },
+  meow: { spamCount: 4, spamWindow: 5, spamRange: 4, cagePitch: 0.96, cagePitchMin: 0.75 },
+  // v2 sitter verbs + cat moves
+  toss: { fwd: 4.5, up: 3.2, pitchMin: -10, pitchMax: 30, pitchUp: 1.5, stun: 0.3, noLoaf: 4, bounce: 2.5, anim: 0.4, maxAir: 3 },
+  slip: { speed: 4.0, range: 0.35, time: 1.2, immune: 4, launchFwd: 2.5, launchUp: 3.5, smear: 1.3 },
+  clap: { range: 6, anim: 0.5, shock: 0.5 },
+  // tapSpeed: the spec says 0.4 m/s for a 4-5 cm slide, but prop friction stops 0.4 after ~1 cm, 0.85 gives ~4.5 cm
+  push: { hold: 0.25, speedMul: 0.3, tapEvery: 0.45, tapSpeed: 0.85, knockWindow: 2 },
+  panic: { on: 80, off: 78, mul: 1.25, sweatEvery: 2.5 },
+  overtime: { threshold: 90, max: 15, keysEvery: 3 },
   camera: {
     cat: { dist: 2.1, height: 0.5, shoulder: 0.0, fov: 70, minDist: 0.4 },
     sitter: { dist: 3.0, height: 1.6, shoulder: 0.5, fov: 65, minDist: 0.6 },

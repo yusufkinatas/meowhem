@@ -1,138 +1,108 @@
 import type { MinigameHost } from '../shared/contracts';
-import { type Game, frame, el, img, place, paw, furOf, pop, shake, burst, fake, rand, pick } from './kit';
+import { type Game, type Finish, frame, el, img, place, furOf, pop, shake, burst, fake, gate, rand, clamp, OTHER_FUR } from './kit';
 
-const C = { x: 410, y: 225 };
-const MASH = ['KeyA', 'KeyD', 'Space'];
-const DIRS = [
-  { code: 'ArrowLeft', label: '←', x: -1, y: 0 }, { code: 'ArrowRight', label: '→', x: 1, y: 0 },
-  { code: 'ArrowUp', label: '↑', x: 0, y: -1 }, { code: 'ArrowDown', label: '↓', x: 0, y: 1 },
-];
-const PER_MASH = 1 / 26, PER_DIR = 0.1, PROMPT_TIME = 1.1;
+// ADDENDUM 4.8: 1.5 s staredown (any key = flinch marker 0.001), then 2.5 s brawl (Space = 0.025 each).
+// The host compares totals and decides; finish('win' | 'lose' | 'off') shows the result.
+const STARE = 1.5, BRAWL = 2.5, FLINCH = 0.001, HIT = 0.025;
+const L = { x: 200, y: 150 }, R = { x: 620, y: 150 }, FACE = 170;
 
 export function fight(host: MinigameHost): Game {
-  const f = frame(host, 'fight', 'Scrap', [[['A', 'D', 'Space'], 'scrap'], [['←↑→↓'], 'on cue']]);
+  const name = String(host.data?.opponent ?? '').slice(0, 18);
+  const f = frame(host, 'fight', name, [[['Space'], '']]);
   const { stage } = f;
-  const fur = furOf(host);
-  const opponent = String(host.data?.opponent ?? 'Someone').slice(0, 16);
+  const mine = furOf(host), theirs = furOf(host, 'opponentFur', OTHER_FUR);
 
-  el('div', 'ft-rug', stage);
-  const vs = el('div', 'ft-vs', stage);
-  vs.textContent = `vs ${opponent}`;
-  const shadow = place(el('div', 'ft-shadow', stage), C.x - 230, 340, 460, 60);
-  const cloud = place(el('div', 'ft-cloud', stage), C.x, C.y, 0, 0);
-  const puffs = [[-120, -40, 230], [100, -60, 240], [0, -120, 220], [-60, 60, 250], [110, 60, 230], [-10, 0, 280], [-170, 30, 170], [180, 0, 170]]
-    .map(([x, y, s], i) => {
-      const e = place(img(i % 3 === 2 ? 'dashing_away' : 'cloud', 'ft-puff', cloud), x - s / 2, y - s / 2, s, s);
-      return { e, x, y, ph: rand(0, 6) };
-    });
-  const pops = el('div', 'ft-pops', stage);
-  const prompt = el('div', 'ft-prompt', stage);
-  const cap = el('div', 'mg-kbd ft-cap', prompt);
-  const timer = el('div', 'ft-timer', prompt);
+  el('div', 'ft-floor', stage);
+  const me = place(img('pouting_cat', 'ft-cat me', stage), L.x - FACE / 2, L.y - FACE / 2, FACE, FACE);
+  const them = place(img('pouting_cat', 'ft-cat them', stage), R.x - FACE / 2, R.y - FACE / 2, FACE, FACE);
+  const growl = el('div', 'ft-growl', stage);
+  const growlFill = el('i', '', growl);
+  const tug = el('div', 'ft-tug', stage);
+  tug.style.background = `linear-gradient(90deg, ${mine} 0 50%, ${theirs} 50% 100%)`;
+  const ball = el('div', 'ft-ball', tug);
+  ball.style.background = `radial-gradient(circle at 36% 30%, #fff9, transparent 40%), radial-gradient(circle at 70% 65%, ${theirs} 0 28%, transparent 30%), ${mine}`;
+  ball.style.outlineColor = mine;
+  const fx = el('div', 'ft-fx', stage);
 
-  let t = 0, wob = 0, nextPrompt = 1.4, dir: (typeof DIRS)[number] | null = null, promptT = 0, stun = 0, botT = 0;
+  const cap = gate(12);
+  let t = 0, flinched = false, m = 0, fightT = 0, result: Finish | null = null, botT = 0, lunge = 0;
+  f.sound('hiss');
+  f.dim('Space', true);
 
-  function popOut(kind: 'paw' | 'me' | 'them' | 'star', dizzy = false): void {
-    const a = rand(0, Math.PI * 2);
-    const r = kind === 'star' ? rand(140, 200) : rand(120, 160);
-    const x = C.x + Math.cos(a) * r * 1.2, y = C.y + Math.sin(a) * r * 0.75;
-    let e: HTMLElement;
-    if (kind === 'paw') {
-      e = paw(Math.random() < 0.5 ? 'beans' : 'back', Math.random() < 0.5 ? fur : '#9C8FA8', 'ft-paw', 'short');
-      pops.appendChild(e);
-      place(e, x - 45, y - 60, 90, 126);
-      e.style.rotate = `${(a * 180) / Math.PI + 90}deg`;
-    } else {
-      const s = kind === 'star' ? 50 : 120;
-      e = place(img(kind === 'me' ? 'pouting_cat' : kind === 'them' ? 'cat_with_wry_smile' : 'star', 'ft-face', pops), x - s / 2, y - s / 2, s, s);
-      if (kind === 'them') e.style.filter = 'hue-rotate(-30deg) saturate(.55) brightness(1.05)';
-      if (dizzy) {
-        const d = place(img('dizzy', 'ft-dizzy', pops), x - 40, y - s / 2 - 50, 80, 80);
-        d.animate({ opacity: [1, 1, 0], rotate: ['0deg', '360deg'] }, { duration: 900 }).onfinish = () => d.remove();
-      }
-    }
-    e.animate({ scale: ['.2', '1.1', '1', '.2'], opacity: [0, 1, 1, 0] }, { duration: dizzy ? 900 : 420, easing: 'ease-out' }).onfinish = () => e.remove();
+  function flinch(): void {
+    if (flinched) return;
+    flinched = true;
+    f.report(FLINCH);
+    me.animate({ translate: ['0 0', '0 -18px', '0 0'], scale: ['1', '1.08 .92', '1'] }, { duration: 260, easing: 'ease-out' });
   }
 
-  function mash(code: string): void {
-    if (stun > 0) return;
-    f.flash(code);
-    wob = 1;
-    host.progress(PER_MASH);
-    f.sound(Math.random() < 0.6 ? 'fight' : 'hiss');
-    popOut(pick(['paw', 'paw', 'me', 'them', 'star'] as const));
-    if (Math.random() < 0.3) burst(stage, C.x + rand(-120, 120), C.y + rand(-60, 60), { cls: 'ft-tuft', n: 2, size: 18, spread: 140, fall: 80 });
+  function hit(): void {
+    if (!cap()) return;
+    f.report(HIT);
+    m = clamp(m + 0.07, -1, 1);
+    lunge = 1;
+    const x = 410 + rand(-50, 50), y = 150 + rand(-50, 40);
+    burst(fx, x, y, { asset: Math.random() < 0.6 ? 'collision' : 'anger_symbol', n: 1, size: 70, spread: 30, up: 10, fall: 0, ms: 380 });
+    if (Math.random() < 0.3) burst(fx, x, y, { cls: 'ft-tuft', n: 2, size: 16, spread: 120, fall: 80 });
+    shake(stage, 4, 140);
   }
 
-  function answer(code: string): void {
-    if (!dir || stun > 0) return;
-    f.flash(code);
-    if (code === dir.code) {
-      host.progress(PER_DIR);
-      burst(stage, C.x + dir.x * 170, C.y + dir.y * 110, { asset: 'collision', n: 3, size: 80, spread: 60 });
-      popOut('them', true);
-      shake(stage, 10, 300);
-      f.sound('thud');
-    } else {
-      stun = 0.45;
-      popOut('me', true);
-      shake(stage, 6, 250);
+  function show(r: Finish): void {
+    result = r;
+    f.dim('Space', true);
+    if (r === 'off') {
+      // nobody moved: both look away
+      me.classList.add('away');
+      them.classList.add('away');
+      growl.classList.add('off');
+      return;
     }
-    dir = null;
-    prompt.classList.remove('on');
+    const win = r === 'win';
+    m = win ? 1 : -1;
+    const w = win ? L : R, lo = win ? R : L;
+    place(img('crown', 'ft-crown', stage), w.x - 46, w.y - FACE / 2 - 70, 92, 92);
+    place(img('dizzy', 'ft-dizzy', stage), lo.x - 50, lo.y - FACE / 2 - 60, 100, 100);
+    pop(win ? me : them, 1.2);
+    if (win) f.sound('ding');
   }
 
   return {
     update(dt) {
-      const p = f.tick();
+      f.tick(dt);
       t += dt;
-      stun = Math.max(0, stun - dt);
-      wob = Math.max(0, wob - dt * 5);
-      cloud.style.transform = `rotate(${Math.sin(t * 2) * 6}deg) scale(${1 + wob * 0.08 + Math.sin(t * 9) * 0.015})`;
-      for (const pf of puffs) pf.e.style.transform = `translate(${Math.sin(t * 7 + pf.ph) * 8}px,${Math.cos(t * 6 + pf.ph) * 8}px) rotate(${Math.sin(t * 3 + pf.ph) * 10}deg)`;
-      shadow.style.scale = `${1 + Math.sin(t * 9) * 0.03}`;
-      if (Math.random() < dt * 3) popOut(pick(['paw', 'star'] as const));
-      if (p >= 0.999) {
-        if (!cloud.classList.contains('gone')) {
-          cloud.classList.add('gone');
-          prompt.classList.remove('on');
-          f.sound('ding');
-          const me = place(img('pouting_cat', 'ft-winner', stage), C.x - 80, C.y - 60, 160, 160);
-          place(img('crown', 'ft-crown', stage), C.x - 45, C.y - 140, 90, 90);
-          pop(me, 1.3);
-          burst(stage, C.x, C.y, { asset: 'star', n: 8, size: 40, spread: 220 });
-        }
-        return;
+      const brawl = t >= STARE && !result;
+      growlFill.style.width = `${clamp(t / STARE) * 100}%`;
+      growl.classList.toggle('done', t >= STARE);
+      f.dim('Space', !brawl);
+      if (brawl) {
+        fightT -= dt;
+        if (fightT < 0) { fightT = 0.45; f.sound('fight', { volume: 0.7 }); }
+        // the other cat pushes back (the host knows the real totals)
+        m = clamp(m - dt * rand(0.1, 0.45), -1, 1);
       }
-      nextPrompt -= dt;
-      if (!dir && nextPrompt <= 0) {
-        dir = pick(DIRS);
-        promptT = PROMPT_TIME;
-        nextPrompt = rand(1.6, 2.6);
-        cap.textContent = dir.label;
-        place(prompt, C.x + dir.x * 270 - 45, C.y + dir.y * 150 - 45);
-        prompt.classList.add('on');
-        pop(prompt, 1.3);
-      }
-      if (dir) {
-        promptT -= dt;
-        timer.style.setProperty('--t', `${Math.max(0, promptT / PROMPT_TIME) * 360}deg`);
-        if (promptT <= 0) { dir = null; prompt.classList.remove('on'); }
-      }
+      lunge = Math.max(0, lunge - dt * 6);
+      const shiver = t < STARE ? Math.sin(t * 50) * 1.5 : 0;
+      me.style.translate = `${lunge * 40 + shiver}px 0`;
+      them.style.translate = `${brawl ? -Math.abs(Math.sin(t * 9)) * 26 : -shiver}px 0`;
+      ball.style.left = `${50 + m * 46}%`;
+      if (t > STARE + BRAWL + 1 && !result) f.dim('Space', true);
     },
     key(e, down) {
-      const isDir = DIRS.some((d) => d.code === e.code);
-      if (!isDir && !MASH.includes(e.code)) return false;
-      if (down && !e.repeat) (isDir ? answer : mash)(e.code);
+      if (!down || e.repeat || result) return true;
+      if (t < STARE) { flinch(); return true; }
+      if (e.code !== 'Space') return false;
+      f.flash('Space');
+      if (t < STARE + BRAWL) hit();
       return true;
     },
     bot(dt) {
+      if (t < STARE) return;
       botT -= dt;
-      if (dir && promptT < PROMPT_TIME - 0.35) { this.key(fake(dir.code), true); return; }
       if (botT > 0) return;
-      botT = rand(0.1, 0.18);
-      this.key(fake(pick(MASH)), true);
+      botT = rand(0.1, 0.16);
+      this.key(fake('Space'), true);
     },
+    finish(r) { f.finish(); show(r); },
     dispose: () => f.dispose(),
   };
 }

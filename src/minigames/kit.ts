@@ -1,8 +1,11 @@
-/** Shared bits for the minigame overlays: panel frame, sprites, paws, juice. */
+/** Shared bits for the minigame overlays: docked panel / slim strip, danger indicator, sprites, paws, juice. */
 import type { MinigameApi, MinigameHost, SoundName } from '../shared/contracts';
 
-/** A minigame instance. `bot` is only used by the preview's auto-demo. */
-export type Game = MinigameApi & { bot?(dt: number): void };
+/** How the host ended a minigame (see REQUESTS: mgClose done/result). */
+export type Finish = 'done' | 'win' | 'lose' | 'off';
+/** A minigame instance. `bot` drives the preview's auto-demo, `finish` is called by the host before a delayed close. */
+export type Game = MinigameApi & { bot?(dt: number): void; finish?(r: Finish): void };
+export interface SoundOpts { pitch?: number; volume?: number }
 
 const urls = import.meta.glob('./assets/*.svg', { eager: true, query: '?url', import: 'default' }) as Record<string, string>;
 export const asset = (name: string): string => urls[`./assets/${name}.svg`] ?? '';
@@ -10,6 +13,7 @@ export const asset = (name: string): string => urls[`./assets/${name}.svg`] ?? '
 export const rand = (a: number, b: number): number => a + Math.random() * (b - a);
 export const clamp = (v: number, a = 0, b = 1): number => Math.min(b, Math.max(a, v));
 export const pick = <T>(xs: readonly T[]): T => xs[Math.floor(Math.random() * xs.length)];
+export const now = (): number => performance.now() / 1000;
 
 export function el<K extends keyof HTMLElementTagNameMap>(tag: K, cls = '', parent?: Element | null, html?: string): HTMLElementTagNameMap[K] {
   const e = document.createElement(tag);
@@ -36,7 +40,7 @@ export function place<T extends HTMLElement>(e: T, x: number, y: number, w?: num
   return e;
 }
 
-// ---------------------------------------------------------------- juice (uses individual `scale` / `translate` props
+// ---------------------------------------------------------------- juice (individual `scale` / `translate` props
 // so it never fights a positioning `transform`)
 export function pop(e: Element, s = 1.25, ms = 240): void {
   e.animate({ scale: ['1', `${s}`, '1'] }, { duration: ms, easing: 'cubic-bezier(.2,1.6,.4,1)' });
@@ -51,7 +55,7 @@ export function shake(e: Element, px = 8, ms = 280): void {
 
 export interface BurstOpts {
   asset?: string;       // sprite name, or
-  cls?: string;         // a CSS-drawn bit (paper scrap, fur tuft...)
+  cls?: string;         // a texture bit (paper scrap, fur tuft, cardboard crumb)
   n?: number;
   size?: number;
   spread?: number;      // px radius
@@ -81,87 +85,166 @@ export function burst(parent: HTMLElement, x: number, y: number, o: BurstOpts = 
   }
 }
 
-/** Floating text puff ("ek ek", "mrrp"). */
-export function puff(parent: HTMLElement, x: number, y: number, text: string, cls = ''): void {
-  const e = place(el('div', `mg-puff ${cls}`, parent, text), x, y);
-  e.animate(
-    [
-      { transform: 'translate(-50%,0) scale(.5)', opacity: 0 },
-      { transform: 'translate(-50%,-14px) scale(1.1)', opacity: 1, offset: 0.25 },
-      { transform: `translate(calc(-50% + ${rand(-20, 20)}px),-60px) scale(1)`, opacity: 0 },
-    ],
-    { duration: 900, easing: 'ease-out' },
-  ).onfinish = () => e.remove();
-}
-
 /** Synthetic key event for the preview bot. */
-export const fake = (code: string): KeyboardEvent => new KeyboardEvent('keydown', { code, key: code.replace(/^Key/, '').toLowerCase() });
+export const fake = (code: string, down = true): KeyboardEvent =>
+  new KeyboardEvent(down ? 'keydown' : 'keyup', { code, key: code === 'Space' ? ' ' : code.replace(/^Key/, '').toLowerCase() });
 
 /** Fresh (non auto-repeat) press of one of `codes`. */
 export const tap = (e: KeyboardEvent, down: boolean, ...codes: string[]): boolean => down && !e.repeat && codes.includes(e.code);
 export const LEFT = ['KeyA', 'ArrowLeft'];
 export const RIGHT = ['KeyD', 'ArrowRight'];
+/** -1 left paw, 1 right paw, 0 neither (A/D, arrows mirror) */
+export const side = (code: string): -1 | 0 | 1 => (LEFT.includes(code) ? -1 : RIGHT.includes(code) ? 1 : 0);
+
+/** Event-rate cap: returns true at most `perSec` times per second (sliding 1 s window, so chords still pass). */
+export function gate(perSec: number, windowed = false): () => boolean {
+  const ts: number[] = [];
+  let last = -1e9;
+  return () => {
+    const t = performance.now();
+    if (!windowed) {
+      if (t - last < 1000 / perSec) return false;
+      last = t;
+      return true;
+    }
+    while (ts.length && t - ts[0] > 1000) ts.shift();
+    if (ts.length >= perSec) return false;
+    ts.push(t);
+    return true;
+  };
+}
 
 // ---------------------------------------------------------------- frame
 export interface Frame {
   root: HTMLElement;
   panel: HTMLElement;
   stage: HTMLElement;
-  /** call once per frame: fits the panel, updates the bar, returns current progress */
-  tick(): number;
+  /** once per frame: fits the panel, danger, bar, flushes streamed progress. Returns progress (never goes down). */
+  tick(dt: number): number;
   /** light the hint keycap for this key code */
   flash(code: string): void;
-  sound(name: SoundName): void;
+  /** dim a hint keycap */
+  dim(code: string, on: boolean): void;
+  /** light a hint keycap (the expected key) */
+  light(code: string, on: boolean): void;
+  sound(name: SoundName, opts?: SoundOpts): void;
+  /** send progress now (split into <= 0.25 messages, the host's per-message cap) */
+  report(d: number): void;
+  /** accumulate continuous progress, sent at ~10 Hz */
+  stream(d: number): void;
+  /** mistakes: lock input for `sec` (never costs progress) */
+  lock(sec: number): void;
+  locked(): boolean;
+  /** seconds since the local player last reported progress */
+  idle(): number;
+  /** other cats working on the same bar right now (host hint if given, else a guess) */
+  helpers(): number;
+  /** host says it's over: freeze at 100% and dim */
+  finish(): void;
+  readonly finished: boolean;
   dispose(): void;
+}
+
+export interface FrameOpts {
+  slim?: boolean;
+  /** extra tick marks on the progress bar (0..1) */
+  ticks?: number[];
+  /** the bar shows 1 - progress (time left in the carrier) */
+  invert?: boolean;
 }
 
 const BASE_W = 860, BASE_H = 580;
 
 /**
+ * Docked panel (bottom half, the 3D spot cam shows above) or slim strip (`escape`).
  * hints: [[keys, label]], keys are display labels ('A', 'D', '←', 'Space').
- * codes map display labels to KeyboardEvent.code for flashing.
  */
-export function frame(host: MinigameHost, kind: string, title: string, hints: [string[], string][]): Frame {
-  const root = el('div', `mg-overlay mg-${kind}`, host.container);
+export function frame(host: MinigameHost, kind: string, title: string, hints: [string[], string][], opts: FrameOpts = {}): Frame {
+  const slim = !!opts.slim;
+  const root = el('div', `mg-overlay mg-${kind}${slim ? ' mg-slim' : ''}`, host.container);
   const fit = el('div', 'mg-fit', root);
   const panel = el('div', 'mg-panel', fit);
-  const head = el('div', 'mg-head', panel);
-  el('div', 'mg-title', head, title);
-  el('div', 'mg-esc', head, '<span class="mg-kbd sm">Esc</span> leave');
-  const stage = el('div', 'mg-stage', panel);
-  const foot = el('div', 'mg-foot', panel);
-  const hintRow = el('div', 'mg-hints', foot);
+  let stage: HTMLElement;
+  let hintRow: HTMLElement, bar: HTMLElement;
+  if (slim) {
+    stage = panel;
+    hintRow = el('div', 'mg-hints', panel);
+    bar = el('div', 'mg-bar', panel);
+  } else {
+    const head = el('div', 'mg-head', panel);
+    el('div', 'mg-title', head, title);
+    el('div', 'mg-esc', head, '<span class="mg-kbd sm">Esc</span> leave');
+    stage = el('div', 'mg-stage', panel);
+    const foot = el('div', 'mg-foot', panel);
+    hintRow = el('div', 'mg-hints', foot);
+    bar = el('div', 'mg-bar', foot);
+  }
+  const fill = el('i', '', bar);
+  for (const t of opts.ticks ?? []) el('b', 'mg-tick', bar).style.left = `${t * 100}%`;
   const caps = new Map<string, HTMLElement[]>();
   for (const [keys, label] of hints) {
     const h = el('div', 'mg-hint', hintRow);
     keys.forEach((k, i) => {
       if (i) el('span', 'mg-or', h, '/');
       const cap = el('span', 'mg-kbd', h, k);
-      const code = CODE[k] ?? `Key${k}`;
-      caps.set(code, [...(caps.get(code) ?? []), cap]);
+      for (const code of CODE[k] ?? [`Key${k}`]) caps.set(code, [...(caps.get(code) ?? []), cap]);
     });
-    el('span', 'mg-hint-label', h, label);
+    if (label) el('span', 'mg-hint-label', h, label);
   }
-  const bar = el('div', 'mg-bar', foot);
-  const fill = el('i', '', bar);
 
-  let lastW = 0, lastH = 0, lastP = -1;
+  // danger indicator: nothing / cat_face / weary_cat shaking + orange border pulse
+  const danger = slim ? null : el('div', 'mg-danger', panel);
+  if (danger) { img('cat_face', 'mg-d1', danger); img('weary_cat', 'mg-d2', danger); }
+  let dangerLvl = -1;
+
+  let lastW = 0, lastH = 0, shown = -1, best = 0;
+  let acc = 0, flushT = 0, lockT = 0, lastMine = -99, finished = false;
+  let seenP = 0, othersT = 0;
   const sounded = new Map<string, number>();
-  return {
+  // the host caps one message at 0.25, so bigger steps (a 0.334 catch) go out in chunks
+  const send = (d: number) => {
+    if (!(d > 0)) return;
+    lastMine = now();
+    for (; d > 1e-6; d -= 0.25) host.progress(Math.min(0.25, d));
+  };
+
+  const f: Frame = {
     root, panel, stage,
-    tick() {
+    get finished() { return finished; },
+    tick(dt) {
       const w = host.container.clientWidth, h = host.container.clientHeight;
       if (w !== lastW || h !== lastH) {
         lastW = w; lastH = h;
-        fit.style.scale = `${Math.min(1.15, (w * 0.9) / BASE_W, (h * 0.86) / BASE_H)}`;
+        const docked = Math.min(1.15, (w * 0.92) / BASE_W, (h * 0.5) / BASE_H);
+        // the strip keeps the panel's scale but stays readable on small screens
+        fit.style.scale = `${slim ? Math.min((w * 0.92) / BASE_W, Math.max(0.8, docked)) : docked}`;
       }
-      const p = clamp(host.getProgress());
-      if (Math.abs(p - lastP) > 0.0005) {
-        lastP = p;
-        fill.style.width = `${p * 100}%`;
-        panel.classList.toggle('done', p >= 0.999);
+      flushT += dt;
+      if (acc > 0 && (acc >= 0.03 || flushT >= 0.1)) { send(acc); acc = 0; flushT = 0; }
+      lockT = Math.max(0, lockT - dt);
+      panel.classList.toggle('locked', lockT > 0);
+      const raw = clamp(host.getProgress());
+      // someone else is adding while we're not: show their paws
+      if (raw > seenP + 0.002 && f.idle() > 0.35) othersT = 0.6;
+      othersT = Math.max(0, othersT - dt);
+      seenP = Math.max(seenP, raw);
+      best = finished ? 1 : Math.max(best, raw);
+      if (Math.abs(best - shown) > 0.0005) {
+        shown = best;
+        fill.style.width = `${(opts.invert ? 1 - best : best) * 100}%`;
+        panel.classList.toggle('done', best >= 0.999);
       }
-      return p;
+      if (danger) {
+        const d = finished || best >= 0.999 ? 0 : clamp(host.danger?.() ?? 0);
+        const lvl = d >= 0.75 ? 2 : d >= 0.35 ? 1 : 0;
+        if (lvl !== dangerLvl) {
+          dangerLvl = lvl;
+          danger.dataset.lvl = String(lvl);
+          panel.classList.toggle('alarm', lvl === 2);
+          if (lvl) pop(danger, 1.3);
+        }
+      }
+      return best;
     },
     flash(code) {
       for (const c of caps.get(code) ?? []) {
@@ -170,19 +253,41 @@ export function frame(host: MinigameHost, kind: string, title: string, hints: [s
         c.classList.add('on');
       }
     },
-    sound(name) {
+    dim(code, on) { for (const c of caps.get(code) ?? []) c.classList.toggle('dim', on); },
+    light(code, on) { for (const c of caps.get(code) ?? []) c.classList.toggle('lit', on); },
+    sound(name, o) {
       // light throttle so mashing doesn't machine-gun the same sample
-      const now = performance.now();
-      if (now - (sounded.get(name) ?? 0) < 70) return;
-      sounded.set(name, now);
-      host.sound?.(name);
+      const t = performance.now();
+      if (t - (sounded.get(name) ?? 0) < 70) return;
+      sounded.set(name, t);
+      // ponytail: contract sound() has no opts yet (REQUESTS P3->P1/P5); extra arg is ignored until forwarded
+      (host.sound as ((n: SoundName, o?: SoundOpts) => void) | undefined)?.(name, o);
     },
-    dispose() { root.remove(); },
+    report: send,
+    stream(d) { if (d > 0) { acc += d; lastMine = now(); } },
+    lock(sec) { lockT = Math.max(lockT, sec); },
+    locked: () => lockT > 0 || finished,
+    idle: () => now() - lastMine,
+    helpers() {
+      const n = host.data?.helpers;
+      if (typeof n === 'function') return Number(n()) || 0;
+      return othersT > 0 ? 1 : 0;
+    },
+    finish() {
+      if (finished) return;
+      finished = true;
+      if (acc > 0) { send(acc); acc = 0; }
+    },
+    dispose() {
+      root.remove();
+    },
   };
+  return f;
 }
 
-const CODE: Record<string, string> = {
-  '←': 'ArrowLeft', '→': 'ArrowRight', '↑': 'ArrowUp', '↓': 'ArrowDown', Space: 'Space', Esc: 'Escape',
+const CODE: Record<string, string[]> = {
+  '←': ['ArrowLeft'], '→': ['ArrowRight'], '↑': ['ArrowUp'], '↓': ['ArrowDown'], Space: ['Space'], Esc: ['Escape'],
+  Enter: ['Enter', 'NumpadEnter'], LMB: ['Mouse0'], 'A–Z': ['Letters'], Wheel: ['Wheel'],
 };
 
 // ---------------------------------------------------------------- paws
@@ -206,14 +311,15 @@ function mix(a: string, b: string, t: number): string {
 
 let uid = 0;
 export const DEFAULT_FUR = '#FFB23F';
+export const OTHER_FUR = '#B9A6C9';
 /**
  * A big fluffy cat paw (bottom = wrist, 100x140 viewBox). 'beans' shows the pink toe beans,
  * 'back' the furry top with toe creases; add class `claws` to the element to unsheathe.
  */
-export function paw(side: 'beans' | 'back', fur = DEFAULT_FUR, cls = '', arm: 'long' | 'short' = 'long'): HTMLElement {
+export function paw(sideName: 'beans' | 'back', fur = DEFAULT_FUR, cls = '', arm: 'long' | 'short' = 'long'): HTMLElement {
   const id = `mgp${++uid}`;
   const light = mix(fur, '#FFF4DA', 0.55), mid = mix(fur, '#7A3410', 0.12), dark = mix(fur, '#7A3410', 0.28), crease = mix(fur, '#7A3410', 0.45);
-  const beans = side === 'beans'
+  const beans = sideName === 'beans'
     ? `<g transform="translate(11 4) scale(3.92)">
         ${TOES.map((d) => `<path d="${d}" fill="url(#${id}b)"/>`).join('')}
         <path d="${PAD}" fill="url(#${id}b)" filter="url(#${id}i)"/>
@@ -244,8 +350,6 @@ export function paw(side: 'beans' | 'back', fur = DEFAULT_FUR, cls = '', arm: 'l
   return e;
 }
 
+const hex = (v: unknown): string | null => (typeof v === 'string' && /^#[0-9a-f]{6}$/i.test(v) ? v : null);
 /** Fur colour the host may pass in data.fur (CSS hex). */
-export const furOf = (host: MinigameHost): string => {
-  const f = host.data?.fur;
-  return typeof f === 'string' && /^#[0-9a-f]{6}$/i.test(f) ? f : DEFAULT_FUR;
-};
+export const furOf = (host: MinigameHost, key = 'fur', fallback = DEFAULT_FUR): string => hex(host.data?.[key]) ?? fallback;

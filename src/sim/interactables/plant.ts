@@ -12,7 +12,7 @@ defineInteractable({
   },
   uses: [
     {
-      role: 'cat', mode: 'hold', time: 3, anim: 'dig', face: 'happy', label: 'Dig in the plant',
+      role: 'cat', mode: 'hold', time: 3, anim: 'dig', face: 'happy', label: 'Dig in the plant', undo: 'Pat the soil down',
       check: (ctx, s) => (s.soil.length ? 'Already dug up' : true),
       onStart(ctx) { ctx.sound('dig', ctx.spot('plant').pos); },
       onComplete(ctx, s, ch) {

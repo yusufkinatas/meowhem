@@ -3,9 +3,10 @@
  * Bots and humans go through exactly this code.
  */
 import type { Role, Vec3 } from '../shared/contracts';
+import type { CharState } from './types';
 import { CFG } from '../config';
 import { RAPIER, CHAR_QUERY, G, groups } from './physics';
-import { clamp, damp, dampAngle, lerp } from './math';
+import { clamp, damp, dampAngle, lerp, wrapAngle } from './math';
 
 export interface MotionInput {
   moveX: number;          // world-space desired direction, length <= 1
@@ -15,7 +16,13 @@ export interface MotionInput {
   jumpHeld: boolean;      // cat: tap = jump, hold = butt-wiggle charge then pounce on release
 }
 
-export interface MotionMods { mul: number; frozen: boolean; inSun: boolean }
+export interface MotionMods {
+  mul: number;
+  frozen: boolean;
+  inSun: boolean;
+  /** the replicated char state: hairball creep + steer, no sprint while carrying / pushing, clap cancels a charge */
+  s?: Pick<CharState, 'st' | 'holding'>;
+}
 
 export const capsule = (role: Role) => (role === 'cat' ? CFG.cat : CFG.sitter);
 
@@ -36,6 +43,10 @@ export class CharMotion {
   private regenWait = 0;
   private holdT = 0;
   private wasHeld = false;
+  /** space must be released before it counts again (after a freeze, clap, hairball) */
+  private jumpLock = false;
+  /** impulses wait for the next step so a release teleport can't eat them (toss, slip launch) */
+  private launch: Vec3 | null = null;
   private coyote = 0;
   private readonly lift: number;
 
@@ -79,25 +90,34 @@ export class CharMotion {
     this.body.setNextKinematicTranslation({ x: p[0], y: p[1] + this.lift, z: p[2] });
   }
 
-  /** push from outside (pokes, fight separation) */
+  /** push from outside (pokes, tosses, slip launches); applied at the start of the next step */
   impulse(v: Vec3) {
-    this.vel[0] += v[0];
-    this.vel[1] += v[1];
-    this.vel[2] += v[2];
-    if (v[1] > 0) this.grounded = false;
+    const l = (this.launch ??= [0, 0, 0]);
+    l[0] += v[0]; l[1] += v[1]; l[2] += v[2];
   }
 
   step(dt: number, inp: MotionInput, mods: MotionMods) {
     const c = capsule(this.role);
+    const st = mods.s?.st;
     this.jumped = false;
     this.landed = 0;
+    if (this.launch) {
+      const l = this.launch;
+      this.launch = null;
+      this.vel[0] += l[0]; this.vel[1] += l[1]; this.vel[2] += l[2];
+      if (l[1] > 0) { this.grounded = false; this.coyote = 0; }
+    }
+    const creep = !!st?.hairball && !mods.frozen;
     let mx = mods.frozen ? 0 : inp.moveX;
     let mz = mods.frozen ? 0 : inp.moveZ;
-    const held = !mods.frozen && inp.jumpHeld;
+    if (mods.frozen || creep || st?.shock) { this.holdT = 0; this.charge = 0; this.wasHeld = false; this.jumpLock = true; }
+    if (!inp.jumpHeld) this.jumpLock = false;
+    const held = !this.jumpLock && inp.jumpHeld;
     const moving = mx * mx + mz * mz > 0.01;
 
     // stamina
-    this.sprinting = !mods.frozen && inp.sprint && moving && this.stamina > 0 && this.charge === 0;
+    const noSprint = creep || !!mods.s?.holding || !!st?.pushMode;
+    this.sprinting = !mods.frozen && !noSprint && inp.sprint && moving && this.stamina > 0 && this.charge === 0;
     if (this.sprinting) {
       this.stamina = Math.max(0, this.stamina - dt);
       this.regenWait = c.regenDelay;
@@ -134,11 +154,19 @@ export class CharMotion {
     if (this.charge > 0) { mx = 0; mz = 0; }
 
     // facing
-    if (inp.faceYaw !== null && !mods.frozen) this.yaw = dampAngle(this.yaw, inp.faceYaw, 14, dt);
+    let speed = (this.sprinting ? c.sprint : c.walk) * mods.mul;
+    if (creep) {
+      // hairball hack: creep forward on its own, input only steers
+      const H = CFG.hairball;
+      const turn = (H.steerDeg * Math.PI / 180) * dt;
+      if (moving) this.yaw += clamp(wrapAngle(Math.atan2(mx, mz) - this.yaw), -turn, turn);
+      mx = Math.sin(this.yaw);
+      mz = Math.cos(this.yaw);
+      speed = H.creep;
+    } else if (inp.faceYaw !== null && !mods.frozen) this.yaw = dampAngle(this.yaw, inp.faceYaw, 14, dt);
     else if (mx * mx + mz * mz > 0.01) this.yaw = dampAngle(this.yaw, Math.atan2(mx, mz), 12, dt);
 
     // horizontal
-    const speed = (this.sprinting ? c.sprint : c.walk) * mods.mul;
     if (this.grounded) {
       this.vel[0] = damp(this.vel[0], mx * speed, 14, dt);
       this.vel[2] = damp(this.vel[2], mz * speed, 14, dt);

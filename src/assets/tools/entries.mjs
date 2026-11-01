@@ -62,7 +62,7 @@ export const ENTRIES = [
   { key: 'armchair', cat: 'furniture', src: KFB + 'armchair_pillows.gltf', name: 'armchair_pillows', ...kfb, scale: 0.6667 },
   { key: 'coffeeTable', cat: 'furniture', src: KFB + 'table_low.gltf', name: 'table_low', ...kfb, fit: { y: 0.45, x: 1.2, z: 0.7 }, nonUniform: true },
   { key: 'tvStand', cat: 'furniture', src: KFB + 'cabinet_medium.gltf', name: 'cabinet_medium', ...kfb, fit: { y: 0.55, x: 1.3, z: 0.5 }, nonUniform: true },
-  { key: 'tv', cat: 'furniture', src: FPP + 'tv_retro_safayan.glb', name: 'Retro TV', ...pp('2tfjTOK1Lh4', 'Alex Safayan', BY), fit: { x: 0.75 }, notes: 'Tabletop CRT with antennas. Screen is material `mat23` (near black, no UVs): put a UV-mapped plane with the Cat TV texture just in front of it.' },
+  { key: 'tv', cat: 'furniture', src: FPP + 'tv_retro_safayan.glb', name: 'Retro TV', ...pp('2tfjTOK1Lh4', 'Alex Safayan', BY), rot: [0, 180, 0], fit: { x: 0.75 }, notes: 'Tabletop CRT with antennas, screen faces +Z (source faced -Z, rotated). Screen is material `mat23` (near black, no UVs): put a UV-mapped plane with the Cat TV texture just in front of it.' },
   { key: 'bookshelf', cat: 'furniture', src: KFK + 'bookcaseOpen.glb', name: 'bookcaseOpen', ...kfk, fit: { y: 1.8 }, tint: { wood: '#c98a58' }, notes: 'Empty: fill with book / frame / plantPot props.' },
   { key: 'wallShelf', cat: 'furniture', src: KFB + 'shelf_B_large_decorated.gltf', name: 'shelf_B_large_decorated', ...kfb, scale: 0.6 },
   { key: 'shelf', cat: 'furniture', src: KFB + 'shelf_A_big.gltf', name: 'shelf_A_big', ...kfb, scale: 0.6 },
@@ -123,6 +123,10 @@ export const ENTRIES = [
   { key: 'shoeRack', cat: 'furniture', src: FPP + 'littlebookcase_doncarson.glb', name: 'Little Bookcase', ...pp('74tXfxoDB9b', 'Don Carson', BY), rot: [0, 180, 0], fit: { y: 0.8 } },
   { key: 'coatRack', cat: 'furniture', src: FPP + 'hatrack_doncarson.glb', name: 'Hat Rack', ...pp('6QuAe-X7WG1', 'Don Carson', BY), fit: { y: 1.75 } },
   { key: 'fuseBox', cat: 'furniture', src: FPP + 'fusebox_zeoxo.glb', name: 'Fuse Box', ...pp('dCzy46eI_IT', 'zeoxo', BY), rot: [0, 180, 0], fit: { y: 0.5 } },
+  { key: 'tree', cat: 'decor', src: TTH + 'tree.gltf', name: 'tree', ...tth, fit: { y: 3.2 }, notes: 'Garden outside the windows.' },
+  { key: 'treeLarge', cat: 'decor', src: TTH + 'tree_large.gltf', name: 'tree_large', ...tth, fit: { y: 4.6 } },
+  { key: 'bush', cat: 'decor', src: TTH + 'foliage_A.gltf', name: 'foliage_A', ...tth, fit: { y: 0.9 } },
+  { key: 'fence', cat: 'decor', src: TTH + 'fence_straight_long.gltf', name: 'fence_straight_long', ...tth, fit: { y: 0.95 } },
   { key: 'doormat', cat: 'furniture', src: TTH + 'doormat.gltf', name: 'doormat', ...tth, fit: { x: 0.9 } },
 
   // ------------------------------------------------------------ decor (static dressing)
@@ -135,6 +139,8 @@ export const ENTRIES = [
   { key: 'bread', cat: 'decor', src: TTBG + 'bread.gltf', name: 'bread', ...ttbg, fit: { z: 0.28 } },
   { key: 'fruitBowl', cat: 'decor', src: TTPP + 'grapes_bowl.gltf', name: 'grapes_bowl', ...ttpp, fit: { x: 0.22 } },
   { key: 'alarmClock', cat: 'decor', src: PPP + 'alarm-clock_y5f363OS9C.glb', name: 'Alarm Clock', ...pp('y5f363OS9C', 'CreativeTrio', CC0), fit: { y: 0.13 } },
+  { key: 'groceryBag', cat: 'decor', src: KFD + 'bag.glb', name: 'bag', ...kfd, fit: { y: 0.36 }, notes: 'End show: owner B carries it in the hold anchor, the baguette sticks out of the top.' },
+  { key: 'baguette', cat: 'decor', src: KFD + 'loaf-baguette.glb', name: 'loaf-baguette', ...kfd, rot: [0, 90, 0], fit: { z: 0.55 }, notes: 'Long axis = Z. Sticks out of groceryBag tilted ~20 degrees.' },
   { key: 'fishBones', cat: 'decor', src: KFD + 'fish-bones.glb', name: 'fish-bones', ...kfd, fit: { z: 0.3 } },
 
   // ------------------------------------------------------------ props (PropKind, origin = collider center)

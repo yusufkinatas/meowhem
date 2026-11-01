@@ -5,27 +5,27 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>MEOWHEM minigames</title>
   <style>
-    html, body { margin: 0; height: 100%; overflow: hidden; font-family: system-ui, sans-serif; }
-    /* stand-in for the 3D game behind the overlay */
+    html, body { margin: 0; height: 100%; overflow: hidden; font-family: system-ui, sans-serif; background: #2a2018; }
+    /* stand-in for the live 3D spot cam behind the docked panel: a real game frame if present, else a warm room */
     #world {
-      position: fixed; inset: 0;
-      background:
+      position: fixed; inset: 0; background-size: cover; background-position: center;
+      background-image: url('./minigames.bg.jpg'),
         radial-gradient(ellipse 30% 20% at 70% 78%, #c98f5c 0 60%, transparent 61%),
-        radial-gradient(ellipse 22% 30% at 18% 60%, #9bbf9a 0 55%, transparent 56%),
         linear-gradient(180deg, #f3dcc2 0 62%, #d7a473 62% 63%, #e2b07c 63%);
     }
-    #world::after { content: ''; position: absolute; left: 40%; top: 18%; width: 22%; height: 30%; background: #bfe3f2; border: 14px solid #fff; border-radius: 6px; }
     #game { position: fixed; inset: 0; }
     #bar {
       position: fixed; left: 0; right: 0; top: 0; z-index: 100; display: flex; gap: 6px; align-items: center; flex-wrap: wrap;
-      padding: 8px 10px; background: rgba(30, 20, 16, .78); color: #fff; font-size: 13px;
+      padding: 6px 10px; background: rgba(30, 20, 16, .82); color: #fff; font-size: 12px;
     }
-    #bar button { border: 0; border-radius: 6px; padding: 5px 9px; font: inherit; cursor: pointer; background: #5b463b; color: #fff; }
+    body.shot #bar { display: none; }
+    #bar button, #bar select { border: 0; border-radius: 6px; padding: 4px 8px; font: inherit; cursor: pointer; background: #5b463b; color: #fff; }
     #bar button.on { background: #ffb23f; color: #3a2216; font-weight: 700; }
-    #bar .sep { width: 1px; height: 20px; background: #7a6255; margin: 0 4px; }
-    #prog { width: 140px; height: 10px; background: #5b463b; border-radius: 5px; overflow: hidden; }
+    #bar .sep { width: 1px; height: 18px; background: #7a6255; margin: 0 3px; }
+    #bar label { display: flex; gap: 4px; align-items: center; }
+    #prog { width: 120px; height: 9px; background: #5b463b; border-radius: 5px; overflow: hidden; }
     #prog i { display: block; height: 100%; width: 0; background: #7fd88a; }
-    #log { opacity: .75; min-width: 120px; }
+    #log { opacity: .75; min-width: 160px; }
   </style>
 </head>
 <body>

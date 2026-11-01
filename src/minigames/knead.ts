@@ -1,96 +1,119 @@
 import type { MinigameHost } from '../shared/contracts';
-import { type Game, frame, el, img, place, paw, furOf, pop, burst, puff, fake, tap, LEFT, RIGHT, rand, clamp } from './kit';
+import { type Game, frame, el, img, place, paw, furOf, pop, fake, side, rand } from './kit';
 
-const PX = [300, 520], PY = 150;
-const FACES = ['cat_face', 'grinning_cat_with_smiling_eyes', 'smiling_cat_with_heart-eyes'];
+// ADDENDUM 4.6: 100 BPM. Odd beats left (A), even beats right (D). Right key within ±150 ms = +1/14.
+const BEAT = 0.6, WINDOW = 0.15, STEP = 1 / 14, MISS_LOCK = 0.4, DOZE = 2;
+const PX = [262, 558], PY = 150;
 
 export function knead(host: MinigameHost): Game {
-  const f = frame(host, 'knead', 'Make biscuits', [[['A', '←'], 'left'], [['D', '→'], 'right'], [[], 'steady rhythm']]);
+  const f = frame(host, 'knead', 'Make biscuits', [[['A', '←'], 'left'], [['D', '→'], 'right'], [[], 'on the beat']]);
   const { stage } = f;
   const fur = furOf(host);
 
-  const pillow = place(el('div', 'kn-pillow', stage), 90, 60, 600, 330);
+  const pillow = el('div', 'kn-pillow', stage);
   el('div', 'kn-seam', pillow);
   const dents = el('div', 'kn-dents', pillow);
   const paws = PX.map((x) => {
-    const p = paw('back', fur, 'kn-paw');
+    const p = paw('beans', fur, 'kn-paw');
     stage.appendChild(p);
-    place(p, x - 75, PY, 150, 210);
+    place(p, x - 78, PY, 156, 218);
     return p;
   });
-  const tags = PX.map((x, i) => place(el('div', 'kn-tag', stage, i ? 'D' : 'A'), x - 17, PY - 46));
-  const meter = place(el('div', 'kn-meter', stage), 726, 70, 52, 290);
-  const fill = el('i', '', meter);
-  const faces = FACES.map((n) => img(n, 'kn-face', stage));
+  const marker = place(el('div', 'kn-beat', stage), 410 - 46, 196, 92, 92);
+  const ring = el('div', 'kn-ring', marker);
+  const tags = PX.map((x, i) => place(el('div', 'kn-tag', stage, i ? 'D' : 'A'), x - 22, PY - 58));
+  const zzz = place(img('zzz', 'kn-zzz', stage), 560, 40, 110, 110);
 
-  let last = -1, lastT = 0, t = 0, purr = 0, purrT = 0, botT = 0, botSide = 0;
-  const down = [0, 0];
+  // beat k happens at k * BEAT; k odd -> left
+  let t = BEAT * 0.5, scored = -1, streak = 0, lastInput = 0, dozing = false, purrT = 0, checked = 0, botT = 0, drooled = false;
+  const beatSide = (k: number) => (k % 2 ? -1 : 1);
 
-  function press(i: number): void {
-    const gap = t - lastT;
-    const good = i !== last && gap > 0.16;
-    last = i;
-    lastT = t;
-    down[i] = 1;
-    paws[i].animate({ scale: ['1 1', '1.08 0.9', '1 1'] }, { duration: 260, easing: 'ease-out' });
-    const dx = PX[i] - 90, dy = PY + 40 - 60;
-    const d = place(el('div', 'kn-dent', dents), dx - 70, dy - 40, 140, 100);
-    d.animate({ opacity: [0.9, 0], scale: ['1', '1.15'] }, { duration: 1400, easing: 'ease-in' }).onfinish = () => d.remove();
-    pillow.animate({ scale: ['1 1', '1.01 0.985', '1 1'] }, { duration: 260 });
-    if (!good) {
-      purr = Math.max(0, purr - 0.2);
-      const snag = place(el('div', 'kn-snag', dents), dx - 12, dy - 50, 24, 16);
-      snag.animate({ opacity: [1, 0.5] }, { duration: 2000, fill: 'forwards' });
+  function press(s: -1 | 1): void {
+    lastInput = t;
+    if (dozing) {
+      // this press only wakes it up
+      dozing = false;
+      zzz.classList.remove('on');
+      pop(stage, 1.02, 200);
       return;
     }
-    purr = clamp(purr + 0.11);
-    host.progress((0.5 + purr) / 20);
-    if (Math.random() < 0.35) burst(stage, PX[i], PY + 30, { cls: 'kn-fluff', n: 2, size: 12, spread: 50, up: 40 });
+    if (f.locked()) return;
+    const k = Math.round(t / BEAT);
+    const i = s < 0 ? 0 : 1;
+    if (Math.abs(t - k * BEAT) > WINDOW || k < 1) return miss(i);
+    if (k === scored) {
+      // two presses inside one beat: claws out, a thread snags
+      streak = 0;
+      paws[i].classList.add('claws');
+      setTimeout(() => paws[i].classList.remove('claws'), 260);
+      f.sound('scratch');
+      const sn = place(el('div', 'kn-snag', dents), PX[i] - 14 + rand(-24, 24), PY + 6 + rand(-10, 20), 28, 18);
+      sn.animate({ opacity: [1, 0.6] }, { duration: 2000, fill: 'forwards' });
+      return;
+    }
+    if (beatSide(k) !== s) return miss(i);
+    scored = k;
+    streak++;
+    f.report(STEP);
+    f.sound('pop', { volume: 0.5 });
+    paws[i].animate({ scale: ['1 1', '1.08 .88', '1 1'], translate: ['0 0', '0 14px', '0 0'] }, { duration: 260, easing: 'ease-out' });
+    const d = place(el('div', 'kn-dent', dents), PX[i] - 70, PY + 10, 140, 100);
+    d.animate({ opacity: [0.9, 0], scale: ['1', '1.15'] }, { duration: 1400, easing: 'ease-in' }).onfinish = () => d.remove();
+    pillow.animate({ scale: ['1 1', '1.01 .985', '1 1'] }, { duration: 260 });
+    if (streak === 8 && !drooled) {
+      drooled = true;
+      const dr = place(img('droplet', 'kn-drool', stage), 404, 150, 26, 26);
+      dr.animate({ translate: ['0 0', '0 30px', '0 210px'], scale: ['.4', '1', '1'], opacity: [1, 1, 0] }, { duration: 1500, easing: 'ease-in' }).onfinish = () => dr.remove();
+    }
+  }
+
+  function miss(i: number): void {
+    // off-beat or wrong paw: freeze, a side-glance wobble, streak gone
+    streak = 0;
+    f.lock(MISS_LOCK);
+    paws.forEach((p) => p.animate({ rotate: ['0deg', `${i ? 6 : -6}deg`, `${i ? -4 : 4}deg`, '0deg'] }, { duration: MISS_LOCK * 1000, easing: 'ease-in-out' }));
+    marker.animate({ translate: ['0 0', '-8px 0', '8px 0', '0 0'] }, { duration: 300 });
   }
 
   return {
     update(dt) {
-      const p = f.tick();
+      const p = f.tick(dt);
       t += dt;
-      if (t - lastT > 0.9) purr = Math.max(0, purr - dt * 0.3);
-      fill.style.height = `${purr * 100}%`;
-      const fi = purr < 0.35 ? 0 : purr < 0.75 ? 1 : 2;
-      faces.forEach((e, i) => {
-        e.style.opacity = i === fi ? '1' : '0';
-        e.style.transform = `translate(724px,${20 - purr * 6}px) rotate(${Math.sin(t * 30) * purr * 3}deg)`;
-      });
-      tags.forEach((g, i) => g.classList.toggle('next', i !== last && p < 0.999));
-      paws.forEach((pw, i) => {
-        down[i] = Math.max(0, down[i] - dt * 4);
-        pw.style.translate = `0 ${down[i] * 16 - (i === last ? 0 : 10)}px`;
-      });
+      // a beat that passed with no press breaks the streak
+      const kNow = Math.floor((t - WINDOW) / BEAT);
+      if (kNow > checked) { checked = kNow; if (scored < kNow) { streak = 0; drooled = false; } }
+      if (!dozing && t - lastInput > DOZE && p < 0.999) { dozing = true; zzz.classList.add('on'); pop(zzz, 1.2); }
+      // the beat marker: a ring closing on each beat, the next paw lit
+      const k = Math.ceil((t - WINDOW) / BEAT);
+      const phase = 1 - (k * BEAT - t) / BEAT;
+      ring.style.scale = `${2.2 - 1.2 * Math.min(1, Math.max(0, phase))}`;
+      ring.style.opacity = dozing ? '0' : `${Math.min(1, phase * 1.6)}`;
+      marker.classList.toggle('hit', Math.abs(t - Math.round(t / BEAT) * BEAT) < 0.07 && !dozing);
+      marker.dataset.side = beatSide(k) < 0 ? 'l' : 'r';
+      tags.forEach((g, i) => g.classList.toggle('next', !dozing && p < 0.999 && beatSide(k) === (i ? 1 : -1)));
       purrT -= dt;
-      if (purr > 0.35 && purrT < 0) {
-        purrT = 1.4 - purr * 0.6;
-        f.sound('purr');
-        puff(stage, 750 + rand(-10, 10), 60, purr > 0.75 ? 'prrrr' : 'prr', 'kn-purr');
-        if (purr > 0.6) burst(stage, 410 + rand(-150, 150), 120, { asset: 'two_hearts', n: 1, size: 40, spread: 30, up: 90, fall: -40, ms: 1200 });
-      }
-      if (p >= 0.999 && !pillow.classList.contains('done')) {
-        pillow.classList.add('done');
-        f.sound('purr');
-        burst(stage, 410, 200, { asset: 'revolving_hearts', n: 5, size: 54, spread: 200, up: 60 });
-        pop(faces[2], 1.4);
-      }
+      if (!dozing && streak > 0 && purrT < 0) { purrT = 1.6; f.sound('purr', { volume: Math.min(1, 0.3 + 0.08 * streak) }); }
+      pillow.classList.toggle('done', p >= 0.999);
     },
     key(e, down) {
-      const l = LEFT.includes(e.code), r = RIGHT.includes(e.code);
-      if (!l && !r) return false;
-      if (tap(e, down, ...LEFT, ...RIGHT)) { f.flash(e.code); press(l ? 0 : 1); }
+      const s = side(e.code);
+      if (!s) return false;
+      if (down && !e.repeat) { f.flash(e.code); press(s); }
       return true;
     },
     bot(dt) {
+      // presses near each beat with a little human jitter
       botT -= dt;
-      if (botT > 0) return;
-      botT = rand(0.32, 0.46);
-      botSide = Math.random() < 0.95 ? botSide ^ 1 : botSide;
-      this.key(fake(botSide ? 'KeyD' : 'KeyA'), true);
+      const k = Math.round(t / BEAT);
+      const off = t - k * BEAT;
+      if (dozing) { this.key(fake('KeyA'), true); return; }
+      if (k >= 1 && k !== scored && off > -0.06 && off < 0.08 && botT <= 0) {
+        botT = 0.3;
+        const s = Math.random() < 0.95 ? beatSide(k) : -beatSide(k);
+        this.key(fake(s < 0 ? 'KeyA' : 'KeyD'), true);
+      }
     },
+    finish() { f.finish(); },
     dispose: () => f.dispose(),
   };
 }

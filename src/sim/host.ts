@@ -10,9 +10,19 @@ import { PROTOCOL_VERSION } from '../net/protocol';
 import type { HostLink, PeerHost } from '../net/transport';
 import { Sim } from './sim';
 import { randomLook } from '../core/profile';
+import { BOT_NAMES } from './bots/names';
 
-const BOT_NAMES = ['Mochi', 'Biscuit', 'Pickle', 'Noodle', 'Tofu', 'Pumpkin', 'Miso', 'Beans'];
 const MAX_CATS = 4;
+
+/** dev URL flags: ?autobot=1 ?balance=1 ?timeScale=N ?difficulty=kitten|houseCat|feral */
+const URLP = new URLSearchParams(typeof location === 'undefined' ? '' : location.search);
+const AUTOBOT = URLP.get('autobot') === '1';
+const BALANCE = URLP.get('balance') === '1';
+const TIME_SCALE = Math.max(0.1, Math.min(16, Number(URLP.get('timeScale')) || 1));
+const DIFF = URLP.get('difficulty') as Difficulty | null;
+/** balance lines collected for tooling (window.__balance) */
+export const balanceLog: unknown[] = [];
+if (BALANCE && typeof window !== 'undefined') (window as unknown as { __balance: unknown[] }).__balance = balanceLog;
 
 export interface HostOptions {
   online: boolean;
@@ -32,11 +42,15 @@ export class HostSession {
   private snapAcc = 0;
   private pingAcc = 0;
   private soloCats: number;
+  private scaleAcc = 0;
+  private logged: unknown = null;
+  private againT = 0;
 
   constructor(private makeLevel: () => LevelData, opts: HostOptions) {
     this.lobby = {
       code: '', hostId: 'p0', players: [],
-      fillBots: opts.fillBots ?? true, botDifficulty: opts.botDifficulty ?? 'houseCat', roundSeconds: opts.roundSeconds ?? CFG.round.seconds,
+      fillBots: opts.fillBots ?? true, botDifficulty: DIFF && ['kitten', 'houseCat', 'feral'].includes(DIFF) ? DIFF : opts.botDifficulty ?? 'houseCat',
+      roundSeconds: opts.roundSeconds ?? CFG.round.seconds,
     };
     this.soloCats = opts.cats ?? MAX_CATS;
   }
@@ -136,15 +150,19 @@ export class HostSession {
     const wantCats = online ? (this.lobby.fillBots ? MAX_CATS : 1) : this.soloCats;
     let i = 0;
     const names = BOT_NAMES.filter((n) => !players.some((p) => p.name.toLowerCase() === n.toLowerCase()));
+    for (let j = names.length - 1; j > 0; j--) { const k = Math.floor(Math.random() * (j + 1)); [names[j], names[k]] = [names[k], names[j]]; }
     while (players.filter((p) => p.role === 'cat').length < Math.max(1, wantCats)) {
       const name = names[i % names.length];
       players.push({ id: `bot${i}`, name, role: 'cat', look: randomLook(name), bot: true, connected: true });
       i++;
     }
     const cfg: GameConfig = { roundSeconds: this.lobby.roundSeconds, botDifficulty: this.lobby.botDifficulty, players, seed };
+    if (AUTOBOT) cfg.autobot = players.filter((p) => !p.bot && p.id === 'p0').map((p) => p.id);
     this.sim?.dispose();
     this.sim = new Sim(this.makeLevel(), cfg);
     this.snapAcc = 1;
+    this.logged = null;
+    this.againT = 0;
     for (const l of this.links.values()) l.send({ t: 'start', cfg });
   }
 
@@ -170,14 +188,34 @@ export class HostSession {
     }
     const sim = this.sim;
     if (!sim) return;
-    sim.step(dt);
+    // ?timeScale=N: N sim steps per host step (all-bot balance runs)
+    this.scaleAcc += TIME_SCALE;
+    for (; this.scaleAcc >= 1; this.scaleAcc--) sim.step(dt);
     if (sim.out.length) this.flushEvents(sim.out.splice(0));
+    if (sim.results && this.logged !== sim.results) {
+      this.roundOver(sim, dt);
+      if (this.sim !== sim) return; // restarted: never send the old round's snapshot
+    }
     this.snapAcc += dt;
     if (this.snapAcc >= 1 / CFG.snapHz) {
       this.snapAcc = 0;
       const msg: H2C = { t: 'snap', s: sim.snapshot() };
       for (const l of this.links.values()) l.send(msg);
     }
+  }
+
+  /** M14: one JSON line per round; balance runs restart solo rounds on their own */
+  private roundOver(sim: Sim, dt: number) {
+    if (!BALANCE) { this.logged = sim.results; return; }
+    if (!this.againT) {
+      const line = sim.balance();
+      balanceLog.push(line);
+      console.log(`[balance] ${JSON.stringify(line)}`);
+    }
+    this.againT += dt;
+    if (this.peer || this.againT < 2) return;
+    this.logged = sim.results;
+    this.start();
   }
 
   private flushEvents(out: { ev: GameEvent; to: string | undefined }[]) {

@@ -1,7 +1,8 @@
 import type { CatLook, PlayerId, Role } from '../shared/contracts';
 import type { Action, GameConfig, GameEvent, LobbyState, MoveMsg, Snapshot } from '../core/types';
 
-export const PROTOCOL_VERSION = 1;
+/** 2: v2 actions (toss, clap, push), Snapshot.overtime, Results receipt/disasters */
+export const PROTOCOL_VERSION = 2;
 
 /** client -> host */
 export type C2H =

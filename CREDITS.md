@@ -30,6 +30,9 @@ License: https://creativecommons.org/licenses/by/3.0/
 | `toyMouse` | Toy Mouse | sirkitree | https://poly.pizza/m/49PYgABKfFo |
 | `yarn` | Yarn Ball v2 | sirkitree | https://poly.pizza/m/0kSphuYy8Or |
 | `fuseBox` | Fuse Box | zeoxo | https://poly.pizza/m/dCzy46eI_IT |
+| `accessories/tophat.glb` | Top Hat / Magician's Hat | Olivia Wynn | https://poly.pizza/m/5D_ieYZ0HUp |
+| `accessories/bowtie.glb` | Bowtie | jeremy | https://poly.pizza/m/fQGdyazJ-2m |
+| `accessories/bell.glb` | Cat Bell | sirkitree | https://poly.pizza/m/ewEuBnM2IuT |
 
 ## CC0 1.0 (public domain, credited as thanks)
 
@@ -38,6 +41,10 @@ License: https://creativecommons.org/publicdomain/zero/1.0/
 | Key | Asset | Author | Source |
 |---|---|---|---|
 | `alarmClock` | Alarm Clock | CreativeTrio | https://poly.pizza/m/y5f363OS9C |
+| `accessories/glasses.glb` | aid-glasses (Mini Characters) | Kenney | https://kenney.nl/assets/mini-characters |
+| `accessories/flowerA.glb` | Flower A | Isa Lousberg | https://poly.pizza/m/DG7oCt9QYv |
+| `accessories/flowerB.glb` | Flower B | Isa Lousberg | https://poly.pizza/m/QznioYyWWN |
+| `accessories/cone.glb` | Funnel | MilkAndBanana | https://poly.pizza/m/Kvg7DKg1Mg |
 | `lamp` | Lamp With Shade | CreativeTrio | https://poly.pizza/m/1nKtMmYxLT |
 | `packageOpen` | Empty Box | CreativeTrio | https://poly.pizza/m/pZBpmjtvw8 |
 | `bathMat` | mat | Isa Lousberg (Tiny Treats) | https://github.com/TinyTreats-Game-Assets/Tiny-Treats-Bubbly-Bathroom-1.0 |
@@ -53,6 +60,10 @@ License: https://creativecommons.org/publicdomain/zero/1.0/
 | `cuttingBoard` | cuttingboard | Isa Lousberg (Tiny Treats) | https://github.com/TinyTreats-Game-Assets/Tiny-Treats-Charming-Kitchen-1.0 |
 | `door` | wall_tiled_doorway (door node only) | Isa Lousberg (Tiny Treats) | https://github.com/TinyTreats-Game-Assets/Tiny-Treats-Bubbly-Bathroom-1.0 |
 | `doormat` | doormat | Isa Lousberg (Tiny Treats) | https://github.com/TinyTreats-Game-Assets/Tiny-Treats-Homely-House-1.0 |
+| `tree` | tree | Isa Lousberg (Tiny Treats) | https://github.com/TinyTreats-Game-Assets/Tiny-Treats-Homely-House-1.0 |
+| `treeLarge` | tree_large | Isa Lousberg (Tiny Treats) | https://github.com/TinyTreats-Game-Assets/Tiny-Treats-Homely-House-1.0 |
+| `bush` | foliage_A | Isa Lousberg (Tiny Treats) | https://github.com/TinyTreats-Game-Assets/Tiny-Treats-Homely-House-1.0 |
+| `fence` | fence_straight_long | Isa Lousberg (Tiny Treats) | https://github.com/TinyTreats-Game-Assets/Tiny-Treats-Homely-House-1.0 |
 | `ducky` | ducky | Isa Lousberg (Tiny Treats) | https://github.com/TinyTreats-Game-Assets/Tiny-Treats-Bubbly-Bathroom-1.0 |
 | `extractorHood` | extractor_hood | Isa Lousberg (Tiny Treats) | https://github.com/TinyTreats-Game-Assets/Tiny-Treats-Charming-Kitchen-1.0 |
 | `fridge` | fridge | Isa Lousberg (Tiny Treats) | https://github.com/TinyTreats-Game-Assets/Tiny-Treats-Charming-Kitchen-1.0 |
@@ -99,6 +110,8 @@ License: https://creativecommons.org/publicdomain/zero/1.0/
 | `bookshelf` | bookcaseOpen | Kenney | https://kenney.nl/assets/furniture-kit |
 | `cat` | Cube Pets: animal-cat | Kenney | https://kenney.nl/assets/cube-pets |
 | `fishBones` | fish-bones | Kenney | https://kenney.nl/assets/food-kit |
+| `groceryBag` | bag | Kenney | https://kenney.nl/assets/food-kit |
+| `baguette` | loaf-baguette | Kenney | https://kenney.nl/assets/food-kit |
 | `officeChair` | chairDesk | Kenney | https://kenney.nl/assets/furniture-kit |
 | `shards` | plate-broken | Kenney | https://kenney.nl/assets/food-kit |
 | `wardrobe` | bookcaseClosedDoors | Kenney | https://kenney.nl/assets/furniture-kit |
@@ -117,8 +130,12 @@ License: https://creativecommons.org/publicdomain/zero/1.0/
 
 ## Packs
 
-- Kenney: Cube Pets, Furniture Kit, Food Kit (https://kenney.nl)
+- Kenney: Cube Pets, Furniture Kit, Food Kit, Mini Characters (https://kenney.nl)
 - Kay Lousberg (KayKit): Character Pack Adventurers, Furniture Bits (https://github.com/KayKit-Game-Assets)
 - Isa Lousberg (Tiny Treats): Charming Kitchen, Bubbly Bathroom, Homely House, House Plants, Pleasant Picnic, Baked Goods, Bakery Interior (https://tinytreats.itch.io)
 - Quaternius: Ultimate House Interior, Poly Pizza singles (https://quaternius.com)
 - Single models via Poly Pizza (https://poly.pizza), authors listed above.
+
+## Fonts
+
+- Caveat (variable) by The Caveat Project Authors, SIL Open Font License 1.1, https://github.com/google/fonts/tree/main/ofl/caveat. File `public/fonts/Caveat.ttf`, license `public/fonts/OFL-Caveat.txt`. Used for the fridge note and handwritten UI.

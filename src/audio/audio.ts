@@ -1,5 +1,5 @@
 import type { AudioApi, SoundName, Vec3 } from '../shared/contracts';
-import { BAR, createMusicEngine, rhodes, vibes, type MusicEngine, type MusicMode } from './music';
+import { BAR, createMusicEngine, noiseBuffer, rhodes, vibes, type MusicEngine, type MusicMode } from './music';
 
 /**
  * Recorded CC0 sounds (public/sounds, see SOURCES.md) + a few synthesized jingles + synthesized music.
@@ -8,7 +8,8 @@ import { BAR, createMusicEngine, rhodes, vibes, type MusicEngine, type MusicMode
  */
 
 // f: file variants, v: volume, j: random pitch jitter in semitones, r: base rate, T: seamless loop length (loop files)
-interface Def { f?: string[]; v: number; j: number; r?: number; T?: number; max?: number }
+// burst: extra copies staggered by these offsets (seconds), e.g. a key ring = three clinks
+interface Def { f?: string[]; v: number; j: number; r?: number; T?: number; max?: number; burst?: number[] }
 const DEFS: Record<SoundName, Def> = {
   meow: { f: ['meow1', 'meow2', 'meow3', 'meow4', 'meow5'], v: 0.9, j: 1 },
   meowShort: { f: ['meowShort1', 'meowShort2', 'meowShort3'], v: 0.85, j: 1 },
@@ -58,6 +59,9 @@ const DEFS: Record<SoundName, Def> = {
   gulp: { f: ['gulp1'], v: 0.65, j: 1 },
   chatter: { f: ['chatter1'], v: 0.8, j: 1 },
   door: { f: ['door1', 'door2'], v: 0.75, j: 1 },
+  clap: { v: 0.8, j: 1 },
+  keys: { f: ['clink1', 'clink3', 'clink2'], v: 0.42, j: 1.5, r: 1.4, burst: [0, 0.06, 0.12], max: 9 },
+  shutter: { v: 0.7, j: 0.3 },
 };
 
 export const SOUND_NAMES = Object.keys(DEFS) as SoundName[];
@@ -85,6 +89,14 @@ const SYNTH: Partial<Record<SoundName, [number, Synth]>> = {
       s.connect(lp); lp.connect(g); g.connect(o); s.start(t); s.stop(t + d + 0.05);
     });
   }],
+  // two 8 ms noise bursts through a 1.8 kHz bandpass, 90 ms apart (M25 fallback)
+  clap: [0.3, (c, o) => { for (const t of [0, 0.09]) noiseBurst(c, o, t, 'bandpass', 1800, 1.2, 0.9, 0.008, 0.035); }],
+  // camera shutter: a sharp click, a short whirr, a second click
+  shutter: [0.25, (c, o) => {
+    noiseBurst(c, o, 0, 'bandpass', 3200, 2, 0.8, 0.004, 0.02);
+    noiseBurst(c, o, 0.012, 'bandpass', 1200, 1.5, 0.25, 0.05, 0.04);
+    noiseBurst(c, o, 0.09, 'bandpass', 2600, 2, 0.6, 0.004, 0.025);
+  }],
   alarm: [1.2, (c, o) => {
     for (const t of [0, 0.16, 0.6, 0.76]) {
       const s = c.createOscillator(), g = c.createGain();
@@ -96,6 +108,13 @@ const SYNTH: Partial<Record<SoundName, [number, Synth]>> = {
   }],
 };
 
+function noiseBurst(c: OfflineAudioContext, o: AudioNode, t: number, type: BiquadFilterType, hz: number, q: number, peak: number, hold: number, decay: number) {
+  const s = c.createBufferSource(), f = c.createBiquadFilter(), g = c.createGain();
+  s.buffer = noiseBuffer(c);
+  f.type = type; f.frequency.value = hz; f.Q.value = q;
+  g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(peak, t + 0.001); g.gain.setValueAtTime(peak, t + hold); g.gain.setTargetAtTime(0, t + hold, decay / 3);
+  s.connect(f); f.connect(g); g.connect(o); s.start(t); s.stop(t + hold + decay * 2 + 0.05);
+}
 async function renderSynth(dur: number, fn: Synth): Promise<AudioBuffer> {
   const c = new OfflineAudioContext(1, Math.ceil(SR * dur), SR);
   fn(c, c.destination);
@@ -257,10 +276,13 @@ export function createAudio(): MeowAudio {
       const buf = list[(Math.random() * list.length) | 0];
       const rate = (d.r ?? 1) * (opts?.pitch ?? 1) * Math.pow(2, ((Math.random() * 2 - 1) * d.j) / 12);
       const vol = d.v * (opts?.volume ?? 1) * (0.88 + Math.random() * 0.12);
-      const v = voice(name, buf, vol, opts?.pos, rate, false);
-      active.set(name, (active.get(name) ?? 0) + 1);
-      v.src.onended = () => { active.set(name, (active.get(name) ?? 1) - 1); v.src.disconnect(); v.pan?.disconnect(); };
-      v.src.start(now);
+      for (const [i, off] of (d.burst ?? [0]).entries()) {
+        const b = d.burst ? list[i % list.length] : buf;
+        const v = voice(name, b, vol, opts?.pos, rate * (d.burst ? Math.pow(2, ((Math.random() * 2 - 1) * d.j) / 12) : 1), false);
+        active.set(name, (active.get(name) ?? 0) + 1);
+        v.src.onended = () => { active.set(name, (active.get(name) ?? 1) - 1); v.src.disconnect(); v.pan?.disconnect(); };
+        v.src.start(now + off);
+      }
     },
 
     loop(id, name, on, opts) {

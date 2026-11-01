@@ -1,104 +1,121 @@
 import type { MinigameHost } from '../shared/contracts';
-import { type Game, frame, el, img, place, paw, furOf, squash, shake, burst, fake, tap, rand } from './kit';
+import { type Game, frame, el, img, place, paw, furOf, pop, shake, squash, burst, fake, gate, side, rand, clamp, OTHER_FUR } from './kit';
 
-const SWIPES = 10;
-// package.svg at W px; tape centreline in svg units: (21.25,5.6) -> (9.75,13) -> (9.75,16.6)
-const W = 380, X0 = 220, Y0 = 30, U = W / 32;
-const P = [[21.25, 5.6], [9.75, 13], [9.75, 16.6]].map(([x, y]) => ({ x: X0 + x * U, y: Y0 + y * U }));
-const L1 = Math.hypot(P[1].x - P[0].x, P[1].y - P[0].y), L2 = P[2].y - P[1].y, LEN = L1 + L2;
-
-/** point along the tape at fraction s */
-function at(s: number): { x: number; y: number } {
-  const d = s * LEN;
-  if (d <= L1) return { x: P[0].x + ((P[1].x - P[0].x) * d) / L1, y: P[0].y + ((P[1].y - P[0].y) * d) / L1 };
-  return { x: P[1].x, y: P[1].y + (d - L1) };
-}
+// ADDENDUM 4.9: alternate A/D to rip, +1/12 per alternation (4 per strip), cap 6/s. Space = chew (fun only).
+const STEP = 1 / 12, STRIPS = 3;
+const BOX = { x: 216, y: 4, w: 390 };
+const TAPE = [
+  { x: 290, y: 190, w: 244, r: -3 },
+  { x: 284, y: 246, w: 256, r: 2 },
+  { x: 294, y: 302, w: 236, r: -1 },
+];
 
 export function openBox(host: MinigameHost): Game {
-  const f = frame(host, 'openBox', 'Open the box', [[['A', 'D'], 'claw'], [[], 'or drag along the tape']]);
+  const f = frame(host, 'openBox', 'Open it', [[['A', '←'], 'left paw'], [['D', '→'], 'right paw'], [['Space'], 'chew']]);
   const { stage } = f;
   const fur = furOf(host);
+  const prize = host.data?.order === 'wetFood' ? 'canned_food' : 'herb';
 
   el('div', 'ob-floor', stage);
-  const shadow = place(el('div', 'ob-shadow', stage), X0 + 30, Y0 + W - 70, W - 60, 60);
-  const box = place(el('div', 'ob-box', stage), X0, Y0, W, W);
-  img('package', 'ob-pkg', box).style.cssText = 'left:0;top:0;width:100%;height:100%';
-  const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-  svg.setAttribute('class', 'ob-tear');
-  svg.setAttribute('viewBox', `${X0} ${Y0} ${W} ${W}`);
-  const d = `M${P[0].x} ${P[0].y}L${P[1].x} ${P[1].y}L${P[2].x} ${P[2].y}`;
-  svg.innerHTML = `<path class="ob-guide" d="${d}"/><path class="ob-slit" d="${d}" pathLength="1"/><g class="ob-marks"></g>`;
-  box.appendChild(svg);
-  const slit = svg.querySelector<SVGPathElement>('.ob-slit')!;
-  const marks = svg.querySelector<SVGGElement>('.ob-marks')!;
-  // svg lives inside the box div, so its user units are stage px offset by the box origin
-  const pawEl = paw('back', fur, 'ob-paw claws');
-  stage.appendChild(pawEl);
-  const rest = at(0.05);
-  place(pawEl, rest.x + 10, rest.y + 50);
+  const shadow = place(el('div', 'ob-shadow', stage), BOX.x + 30, BOX.y + BOX.w - 60, BOX.w - 60, 54);
+  const box = place(el('div', 'ob-box', stage), BOX.x, BOX.y, BOX.w, BOX.w);
+  img('package', 'ob-pkg', box);
+  const goodie = place(img(prize, 'ob-prize', stage), BOX.x + BOX.w / 2 - 50, BOX.y + 80, 100, 100);
+  const strips = TAPE.map((tp) => {
+    const s = place(el('div', 'ob-strip', stage), tp.x, tp.y, tp.w, 40);
+    s.style.rotate = `${tp.r}deg`;
+    const halves = [el('div', 'ob-half l', s), el('div', 'ob-half r', s)];
+    return { s, halves, marks: 0, torn: false };
+  });
+  const paws = [paw('back', fur, 'ob-paw claws'), paw('back', fur, 'ob-paw claws')];
+  const home = [{ x: 150, y: 250, r: 24 }, { x: 670, y: 250, r: -24 }];
+  paws.forEach((p, i) => { stage.appendChild(p); place(p, home[i].x - 62, home[i].y, 124, 174); p.style.rotate = `${home[i].r}deg`; });
+  const buddy = paw('back', OTHER_FUR, 'ob-paw ob-buddy claws');
+  stage.appendChild(buddy);
+  place(buddy, BOX.x + BOX.w - 40, -60, 110, 154);
+  buddy.style.rotate = '200deg';
 
-  let last = -1, dragging = false, dragAcc = 0, lastX = 0, lastY = 0, botT = 0, botSide = 0, t = 0;
+  const cap = gate(6);
+  let last = 0, botT = 0, buddyT = 0, opened = false, t = 0;
 
-  function swipe(i: number): void {
-    const s = Math.min(1, host.getProgress() + 0.05);
-    const pt = at(s);
-    const dir = i === last ? 0.5 : 1;
-    last = i;
-    // rest just below-right of the tear so the tape stays readable; slash across it
-    pawEl.style.left = `${pt.x + 10}px`;
-    pawEl.style.top = `${pt.y + 50}px`;
-    pawEl.animate(
-      { translate: ['0 0', '10px -150px', '-110px -90px', '0 0'], rotate: ['0deg', '18deg', '-12deg', '0deg'] },
-      { duration: 320, easing: 'cubic-bezier(.3,.8,.4,1)' },
+  function rip(s: -1 | 1): void {
+    const same = s === last;
+    last = s;
+    if (f.locked()) return;
+    const i = s < 0 ? 0 : 1;
+    const cur = strips.find((x) => !x.torn) ?? strips[STRIPS - 1];
+    const tp = TAPE[strips.indexOf(cur)];
+    const tx = tp.x + tp.w * (i ? 0.7 : 0.3), ty = tp.y + 20;
+    paws[i].animate(
+      { translate: ['0 0', `${(tx - home[i].x) * 0.8}px ${(ty - home[i].y) * 0.8 - 40}px`, `${(tx - home[i].x) * 0.8 + (i ? -60 : 60)}px ${(ty - home[i].y) * 0.8 + 30}px`, '0 0'] },
+      { duration: 300, easing: 'cubic-bezier(.3,.8,.4,1)' },
     );
-    host.progress(dir / SWIPES);
-    const m = document.createElementNS('http://www.w3.org/2000/svg', 'g');
-    m.setAttribute('transform', `translate(${pt.x} ${pt.y}) rotate(${rand(30, 50)})`);
-    m.innerHTML = [-9, 0, 9].map((o) => `<path d="M${o - 3} -16 L${o + 3} 16"/>`).join('');
-    marks.appendChild(m);
-    squash(box, 220);
-    f.sound(Math.random() < 0.5 ? 'scratch' : 'paperRip');
-    burst(stage, pt.x, pt.y, { cls: 'ob-bit', n: 4, size: 14, spread: 80, up: 40, fall: 90 });
+    if (same) { shake(cur.s, 3, 160); return; }
+    if (!cap()) return;
+    f.report(STEP);
+    f.sound('scratch', { volume: 0.7 });
+    squash(box, 180);
+    burst(stage, tx, ty, { cls: 'ob-bit', n: 3, size: 12, spread: 70, up: 40, fall: 80 });
+  }
+
+  function chew(): void {
+    // the corner. No progress, just cardboard.
+    f.sound('crunch');
+    shake(box, 4, 200);
+    burst(stage, BOX.x + BOX.w - 40, BOX.y + BOX.w - 90, { cls: 'ob-bit', n: 8, size: 14, spread: 90, up: 30, fall: 120, ms: 900 });
   }
 
   return {
     update(dt) {
-      const p = f.tick();
+      const p = f.tick(dt);
       t += dt;
-      slit.style.strokeDashoffset = `${1 - p}`;
-      if (p < 0.999) box.style.rotate = `${Math.sin(t * 2) * 1.2}deg`;
-      if (p >= 0.999 && !box.classList.contains('open')) {
-        box.classList.add('open');
+      const k = p * STRIPS;
+      strips.forEach((st, i) => {
+        const a = clamp(k - i);
+        const want = Math.min(4, Math.floor(a * 4 + 0.001));
+        while (st.marks < want && st.marks < 3) {
+          st.marks++;
+          const m = place(el('div', 'ob-marks', st.s), 14 + st.marks * 48 + rand(-12, 12), 2, 44, 36);
+          m.style.rotate = `${rand(-30, 30)}deg`;
+        }
+        if (want >= 4 && !st.torn) {
+          st.torn = true;
+          st.s.classList.add('torn');
+          f.sound('paperRip');
+          burst(stage, TAPE[i].x + TAPE[i].w / 2, TAPE[i].y + 20, { cls: 'ob-bit tape', n: 6, size: 16, spread: 120, up: 50, fall: 120 });
+        }
+      });
+      if (p < 0.999) box.style.rotate = `${Math.sin(t * 2) * 1}deg`;
+      // another cat ripping from the top
+      if (f.helpers() > 0 && p < 0.999) {
+        buddy.classList.add('on');
+        buddyT -= dt;
+        if (buddyT < 0) { buddyT = rand(0.3, 0.45); buddy.animate({ translate: ['0 0', '-40px 70px', '0 0'] }, { duration: 260 }); }
+      } else buddy.classList.remove('on');
+      if (p >= 0.999 && !opened) {
+        opened = true;
         box.style.rotate = '0deg';
-        box.animate({ translate: ['0 0', '0 -40px', '0 0'], scale: ['1 1', '0.95 1.08', '1.06 0.94', '1 1'] }, { duration: 500, easing: 'ease-out' });
+        box.animate({ translate: ['0 0', '0 -34px', '0 0'], scale: ['1 1', '.95 1.08', '1.06 .94', '1 1'] }, { duration: 480, easing: 'ease-out' });
         shake(shadow, 4);
         f.sound('pop');
-        burst(stage, X0 + W / 2, Y0 + 60, { asset: 'sparkles', n: 6, size: 54, spread: 200, up: 60 });
-        burst(stage, X0 + W / 2, Y0 + 90, { asset: 'dashing_away', n: 3, size: 90, spread: 160, up: 30 });
+        goodie.classList.add('out');
+        pop(goodie, 1.2, 300);
       }
     },
     key(e, down) {
-      const l = e.code === 'KeyA' || e.code === 'ArrowLeft', r = e.code === 'KeyD' || e.code === 'ArrowRight' || e.code === 'Space';
-      if (!l && !r) return false;
-      if (tap(e, down, e.code)) { f.flash(e.code); swipe(l ? 0 : 1); }
+      if (e.code === 'Space') { if (down && !e.repeat) { f.flash('Space'); chew(); } return true; }
+      const s = side(e.code);
+      if (!s) return false;
+      if (down && !e.repeat) { f.flash(e.code); rip(s); }
       return true;
-    },
-    mouse(e) {
-      if (e.type === 'mousedown') { dragging = true; lastX = e.clientX; lastY = e.clientY; }
-      if (e.type === 'mouseup') dragging = false;
-      if (e.type === 'mousemove' && dragging && e.buttons) {
-        dragAcc += Math.hypot(e.clientX - lastX, e.clientY - lastY);
-        lastX = e.clientX; lastY = e.clientY;
-        if (dragAcc > 45) { dragAcc = 0; swipe(last ^ 1); }
-      }
     },
     bot(dt) {
       botT -= dt;
       if (botT > 0) return;
-      botT = rand(0.22, 0.34);
-      botSide ^= 1;
-      this.key(fake(botSide ? 'KeyD' : 'KeyA'), true);
+      botT = rand(0.3, 0.36);
+      this.key(fake(last < 0 ? 'KeyD' : 'KeyA'), true);
     },
+    finish() { f.finish(); },
     dispose: () => f.dispose(),
   };
 }

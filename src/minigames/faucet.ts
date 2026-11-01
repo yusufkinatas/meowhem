@@ -1,110 +1,119 @@
 import type { MinigameHost } from '../shared/contracts';
-import { type Game, frame, el, img, place, paw, furOf, pop, shake, burst, fake, tap, LEFT, RIGHT, rand, clamp } from './kit';
+import { type Game, frame, el, img, place, paw, furOf, pop, shake, burst, fake, gate, tap, rand } from './kit';
 
-const SWATS = 28;
-// bathtub_empty.svg is 32 units square, drawn at W px: unit -> stage px
-const W = 480, TX = 170, TY = -14, U = W / 32;
-const NOZ = { x: TX + 20.55 * U, y: TY + 9.4 * U };
-const RIM = TY + 15.6 * U;
-const KNOB = { x: TX + 25.1 * U, y: TY + 11.6 * U };
+// ADDENDUM 4.2: bat the handle. +0.025 per tap, at most one every 0.12 s.
+const PER_TAP = 0.025, DROP_AFTER = 0.8;
+// potable_water.svg: viewBox 17 x 12 units starting at (9.4, 4.2), drawn TW px wide
+const TW = 270, TX = 300, TY = 8, U = TW / 17;
+const tp = (x: number, y: number) => ({ x: TX + (x - 9.4) * U, y: TY + (y - 4.2) * U });
+const PIVOT = tp(19.36, 8.0), HANDLE = tp(19.36, 6.2), SPOUT = tp(12.36, 15.0);
+// bathtub_empty.svg (32 units), its own little tap cropped off; rim at 49 % of its height
+const BW = 430, BX = SPOUT.x - BW * 0.47, RIM = 292, BY = RIM - BW * 0.49;
+const HOME = { x: 690, y: 236, r: -22 };
 
 export function faucet(host: MinigameHost): Game {
-  const f = frame(host, 'faucet', 'Run a bath', [[['A', '←'], 'left paw'], [['D', '→'], 'right paw'], [[], 'alternate']]);
+  const f = frame(host, 'faucet', 'Run a bath', [[['Space', 'LMB'], 'bat the handle']]);
   const { stage } = f;
   const fur = furOf(host);
 
-  const tub = place(img('bathtub_empty', 'fc-tub', stage), TX, TY, W, W);
-  const stream = el('div', 'fc-stream', stage);
-  const foam: HTMLImageElement[] = [];
-  for (let i = 0; i < 9; i++) {
-    const s = rand(70, 110);
-    const b = place(img('bubbles', 'fc-foam', stage), TX + 3.6 * U + i * 2.6 * U - s * 0.3 + rand(-8, 8), RIM - s * 0.72 + rand(-6, 10), s, s);
-    b.style.rotate = `${rand(-30, 30)}deg`;
-    foam.push(b);
-  }
-  stage.appendChild(tub); // tub in front of foam bottoms
-  stage.appendChild(stream);
-  const knob = place(el('div', 'fc-knob', stage), KNOB.x - 34, KNOB.y - 34, 68, 68);
-  knob.innerHTML = `<svg viewBox="-34 -34 68 68"><defs>
-      <linearGradient id="fck" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#F4F2F7"/><stop offset=".55" stop-color="#B9B5C2"/><stop offset="1" stop-color="#8E8999"/></linearGradient>
-      <radialGradient id="fcc" cx=".35" cy=".3"><stop offset="0" stop-color="#FFFFFF"/><stop offset="1" stop-color="#C9C5D1"/></radialGradient></defs>
-    ${[0, 90, 180, 270].map((a) => `<rect x="-7" y="-31" width="14" height="30" rx="7" fill="url(#fck)" transform="rotate(${a})"/>`).join('')}
-    <circle r="13" fill="url(#fcc)"/><circle r="5" fill="#5BB7F0"/></svg>`;
+  const tub = place(img('bathtub_empty', 'fc-tub', stage), BX, BY, BW, BW);
+  const stream = place(el('div', 'fc-stream', stage), SPOUT.x - 15, SPOUT.y - 4, 30, RIM - SPOUT.y + 24);
+  const foam = [0, 1, 2, 3, 4].map((i) => place(img('bubbles', 'fc-foam', stage), BX + 70 + i * 60 + rand(-8, 8), RIM - 72 + rand(-6, 6), 84, 84));
+  stage.appendChild(tub);
+  place(img('potable_water', 'fc-tap', stage), TX, TY, TW, 12 * U);
+  const handle = place(img('potable_water', 'fc-tap fc-handle', stage), TX, TY, TW, 12 * U);
+  handle.style.transformOrigin = `${PIVOT.x - TX}px ${PIVOT.y - TY}px`;
+  const drop = place(img('droplet', 'fc-drop', stage), SPOUT.x - 15, SPOUT.y - 6, 30, 30);
+  const glass = el('div', 'fc-glass', stage);
+  const p1 = paw('beans', fur, 'fc-paw');
+  stage.appendChild(p1);
+  place(p1, HOME.x - 70, HOME.y, 140, 196);
+  p1.style.rotate = `${HOME.r}deg`;
 
-  const paws = [paw('beans', fur, 'fc-paw'), paw('beans', fur, 'fc-paw')];
-  const home = [{ x: 560, y: 262, r: -18 }, { x: 700, y: 248, r: -34 }];
-  paws.forEach((p, i) => { stage.appendChild(p); place(p, home[i].x - 65, home[i].y, 130, 182); p.style.rotate = `${home[i].r}deg`; });
+  const cap = gate(1 / 0.12);
+  let ang = 0, angV = 0, caught = false, idle = 9, sputtered = false, gushed = false, dripT = 0, botT = 0;
 
-  let last = -1;
-  let angle = 0, spin = 0;
-  let dripT = 0, splashT = 0, botT = 0, botSide = 0;
-  let flowing = false;
-  let shown = 0;
-
-  function swat(i: number): void {
-    const p = paws[i];
-    const dx = KNOB.x - home[i].x, dy = KNOB.y - home[i].y - 20;
-    p.animate({ translate: ['0 0', `${dx * 0.75}px ${dy * 0.75}px`, '0 0'], scale: ['1', '0.92', '1'] },
-      { duration: 230, easing: 'cubic-bezier(.3,.8,.4,1)' });
-    if (i === last) {
-      spin -= 120;
-      shake(knob, 4, 200);
+  function swat(): void {
+    if (f.locked()) return;
+    if (!cap()) return;
+    idle = 0;
+    const p = host.getProgress();
+    p1.animate({ translate: ['0 0', `${(HANDLE.x - HOME.x) * 0.9}px ${(HANDLE.y - HOME.y + 40) * 0.9}px`, '0 0'], rotate: [`${HOME.r}deg`, `${HOME.r + 12}deg`, `${HOME.r}deg`] },
+      { duration: 210, easing: 'cubic-bezier(.3,.8,.4,1)' });
+    if (!caught) {
+      // the handle had dropped back: this tap only re-catches it
+      caught = true;
+      angV -= 140;
+      f.sound('clink', { pitch: 0.7 });
       return;
     }
-    last = i;
-    spin += i === 0 ? 420 : 380;
-    host.progress(1 / SWATS);
-    f.sound('clink');
-    burst(stage, KNOB.x, KNOB.y, { cls: 'fc-spark', n: 4, size: 12, spread: 50, up: 20 });
+    angV -= 260;
+    f.report(PER_TAP);
+    f.sound('clink', { pitch: 0.9 + p * 0.7 });
+    burst(stage, HANDLE.x, HANDLE.y, { cls: 'fc-spark', n: 3, size: 10, spread: 40, up: 16 });
+  }
+
+  function sputter(): void {
+    sputtered = true;
+    f.sound('splash');
+    f.lock(0.3);
+    burst(stage, SPOUT.x, SPOUT.y + 8, { asset: 'droplet', n: 10, size: 26, spread: 150, up: 40, fall: 60, ms: 800 });
+    for (let i = 0; i < 5; i++) {
+      const s = rand(38, 70);
+      const d = place(img('droplet', 'fc-sdrop', glass), rand(40, 760), rand(10, 260), s, s);
+      d.animate({ translate: ['0 0', `0 ${rand(60, 140)}px`], opacity: [0.9, 0.9, 0] }, { duration: rand(1300, 2100), easing: 'ease-in' }).onfinish = () => d.remove();
+    }
+    p1.animate({ translate: ['0 0', '40px 70px', '0 0'], rotate: [`${HOME.r}deg`, `${HOME.r + 25}deg`, `${HOME.r}deg`] }, { duration: 320, easing: 'ease-out' });
+  }
+
+  function gush(): void {
+    gushed = true;
+    f.sound('waterRun');
+    stream.classList.add('on');
+    drop.classList.remove('on');
+    foam.forEach((b, i) => setTimeout(() => { b.classList.add('on'); pop(b, 1.3); }, 120 + i * 90));
+    burst(stage, SPOUT.x, RIM - 10, { asset: 'droplet', n: 12, size: 24, spread: 180, up: 70, fall: 50, ms: 900 });
+    p1.animate({ translate: ['0 0', '120px 200px'], rotate: [`${HOME.r}deg`, `${HOME.r + 40}deg`] }, { duration: 260, easing: 'ease-in', fill: 'forwards' });
+    shake(p1, 10, 400);
   }
 
   return {
     update(dt) {
-      const p = f.tick();
-      spin *= Math.exp(-dt * 4);
-      angle += spin * dt + dt * p * 20;
-      knob.style.rotate = `${angle}deg`;
-      // drip -> trickle -> stream
-      const w = p < 0.12 ? 0 : 4 + p * 26;
-      stream.style.cssText = `left:${NOZ.x - w / 2}px;top:${NOZ.y}px;width:${w}px;height:${RIM - NOZ.y + 4}px;opacity:${w ? 0.9 : 0}`;
-      if (p >= 0.12 && !flowing) { flowing = true; f.sound('waterRun'); }
-      if (p < 0.12) {
-        dripT -= dt * (1 + p * 30);
-        if (dripT < 0 && p > 0) {
-          dripT = 0.7;
-          const d = place(img('droplet', 'fc-drop', stage), NOZ.x - 9, NOZ.y, 18, 18);
-          d.animate({ transform: ['translateY(0) scale(.6)', `translateY(${RIM - NOZ.y - 12}px) scale(1)`] }, { duration: 420, easing: 'ease-in' })
-            .onfinish = () => { d.remove(); burst(stage, NOZ.x, RIM, { asset: 'droplet', n: 3, size: 10, spread: 26, up: 22, fall: 20, ms: 380 }); };
-        }
-      } else {
-        splashT -= dt;
-        if (splashT < 0) {
-          splashT = 0.16 - p * 0.08;
-          burst(stage, NOZ.x, RIM - 4, { asset: 'droplet', n: 2, size: 8 + p * 8, spread: 30 + p * 40, up: 26, fall: 26, ms: 420 });
-          if (Math.random() < 0.15) f.sound('splash');
+      const p = f.tick(dt);
+      idle += dt;
+      if (caught && idle > DROP_AFTER && !gushed) { caught = false; angV += 90; }
+      const target = gushed ? -75 : caught ? -(14 + p * 56) : 0;
+      angV += ((target - ang) * 90 - angV * 11) * dt;
+      ang += angV * dt;
+      handle.style.rotate = `${ang}deg`;
+      if (p >= 0.4 && !gushed) drop.classList.add('on');
+      drop.style.scale = `${0.7 + Math.min(1, p) * 0.5 + Math.sin(performance.now() / 90) * 0.06}`;
+      if (p >= 0.7 && !sputtered) sputter();
+      if (p >= 0.7 && !gushed) {
+        dripT -= dt;
+        if (dripT < 0) {
+          dripT = rand(0.35, 0.7);
+          const d = place(img('droplet', 'fc-fall', stage), SPOUT.x - 10, SPOUT.y + 4, 20, 20);
+          d.animate({ translate: ['0 0', `0 ${RIM - SPOUT.y - 20}px`], scale: ['.6', '1'] }, { duration: 380, easing: 'ease-in' }).onfinish = () => d.remove();
         }
       }
-      const want = Math.floor(clamp((p - 0.15) / 0.8) * foam.length + (p >= 0.999 ? 1 : 0));
-      while (shown < Math.min(want, foam.length)) { foam[shown].classList.add('on'); pop(foam[shown], 1.2); shown++; }
-      if (p >= 0.999 && !tub.classList.contains('full')) {
-        tub.classList.add('full');
-        f.sound('ding');
-        burst(stage, TX + W / 2, RIM - 40, { asset: 'bubbles', n: 6, size: 40, spread: 200, up: 80 });
-      }
+      if (p >= 0.999 && !gushed) gush();
     },
     key(e, down) {
-      const l = LEFT.includes(e.code), r = RIGHT.includes(e.code);
-      if (!l && !r) return false;
-      if (tap(e, down, ...LEFT, ...RIGHT)) { f.flash(e.code); swat(l ? 0 : 1); }
+      if (e.code !== 'Space') return false;
+      if (tap(e, down, 'Space')) { f.flash('Space'); swat(); }
       return true;
+    },
+    mouse(e) {
+      if (e.type === 'mousedown' && e.button === 0) { f.flash('Mouse0'); swat(); }
     },
     bot(dt) {
       botT -= dt;
       if (botT > 0) return;
-      botT = rand(0.2, 0.34);
-      botSide = Math.random() < 0.92 ? botSide ^ 1 : botSide;
-      this.key(fake(botSide ? 'KeyD' : 'KeyA'), true);
+      botT = rand(0.16, 0.2);
+      this.key(fake('Space'), true);
     },
+    finish() { f.finish(); },
     dispose: () => f.dispose(),
   };
 }

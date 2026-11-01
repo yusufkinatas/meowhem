@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Cat model preview</title>
+  <style>
+    html, body { margin: 0; height: 100%; overflow: hidden; background: #f4e4cc; font: 13px/1.3 system-ui, sans-serif; }
+    canvas { display: block; }
+    #hud { position: fixed; top: 8px; left: 8px; font: 700 13px system-ui; color: #3a2a22; background: rgba(255,250,242,.92); padding: 5px 10px; border-radius: 8px; z-index: 2; }
+    #hud a { color: #b4532a; margin-right: 8px; text-decoration: none; }
+    #hud a.on { text-decoration: underline; }
+    .lbl { font: 700 11px system-ui; color: #3a2a22; background: rgba(255,250,242,.85); padding: 1px 6px; border-radius: 6px; white-space: nowrap; }
+  </style>
+</head>
+<body>
+  <div id="hud">loading…</div>
+  <script type="module" src="./cat.ts"></script>
+</body>
+</html>

@@ -1,5 +1,10 @@
 Minigame art: Microsoft Fluent UI Emoji (Color), https://github.com/microsoft/fluentui-emoji
-Used under the MIT License below. bathtub_empty.svg is bathtub.svg with the foam removed.
+Used under the MIT License below. Modified files:
+- bathtub_empty.svg is bathtub.svg with the foam removed.
+- potable_water.svg is potable_water_color.svg ("Potable water") cropped to the tap, with the blue sign and the
+  glass removed and the tap recoloured chrome.
+All other .svg files in this folder are unmodified Fluent Emoji (Color) assets.
+The paw drawn by kit.ts paw() reuses the toe and pad paths of paw_prints_color.svg ("Paw prints"), same set.
 
     MIT License
 

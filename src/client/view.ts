@@ -61,9 +61,11 @@ export interface CharView {
 
 export function catVisual(s: CharState, speed: number, vy: number, grounded: boolean): CatVisualState {
   const st = s.st;
+  const gest = s.gest as string | null;
   let anim: CatAnim = 'idle';
   if (s.grabbedBy) anim = 'grabbed';
   else if (st.caged) anim = 'caged';
+  else if (st.tossed) anim = vy > 0.5 ? 'jump' : 'fall';
   else if (st.fight) anim = 'fight';
   else if (st.hypnotized) anim = 'hypnotized';
   else if (st.stunned) anim = 'stunned';
@@ -72,62 +74,74 @@ export function catVisual(s: CharState, speed: number, vy: number, grounded: boo
   else if (s.work?.anim) anim = s.work.anim as CatAnim;
   else if (s.charge > 0) anim = 'pounceCharge';
   else if (!grounded) anim = vy > 0 ? 'jump' : 'fall';
-  else if (s.gest === 'swipe') anim = 'swipe';
+  else if (st.pushMode || gest === 'tap') anim = 'tap';
+  else if (gest === 'swipe') anim = 'swipe';
+  else if (gest === 'groom') anim = 'groom';
   else if (st.sleep && speed < 0.25) anim = 'sleep';
   else if (s.loaf) anim = st.sleep ? 'sleep' : 'loaf';
   else if (speed > 4) anim = 'run';
   else if (speed > 0.25) anim = s.item ? 'carryMouth' : 'walk';
-  else if (st.treat) anim = 'sit';
+  else if (st.treat || (s.lookAt && !s.work)) anim = 'sit';
   let face: CatFace = 'neutral';
-  if (s.gest === 'hiss') face = 'angry';
+  if (gest === 'hiss') face = 'angry';
+  else if (st.tossed || st.shock) face = 'shock';
+  else if (st.noodle) face = 'sleepy';
   else if (s.grabbedBy) face = 'unimpressed';
   else if (st.flehmen) face = 'flehmen';
   else if (st.catnip) face = 'derp';
   else if (st.stunned || st.fight) face = 'shock';
   else if (st.hypnotized) face = 'love';
   else if (s.work?.face) face = s.work.face as CatFace;
-  else if (s.charge > 0) face = 'focused';
+  else if (st.smug) face = 'smug';
+  else if (s.charge > 0 || st.pushMode) face = 'focused';
   else if (st.wet) face = 'sad';
   else if (st.crown) face = 'smug';
   else if (st.treat || st.eating || st.fed) face = 'happy';
   else if (s.loaf) face = 'sleepy';
-  const talk = s.gest === 'meow' ? 'meow' : s.gest === 'hiss' ? 'hiss' : s.loaf && st.fed ? 'purr' : null;
+  const talk = gest === 'meow' ? 'meow' : gest === 'hiss' ? 'hiss' : st.noodle || (s.loaf && st.fed) ? 'purr' : null;
   return {
     anim, face, speed, vy, grounded,
     wet: Math.min(1, (st.wet ?? 0) / 2),
-    puffed: s.gest === 'hiss' || !!st.fight,
+    puffed: gest === 'hiss' || !!st.fight,
     high: !!st.catnip,
     talk,
     lookAt: s.lookAt ? new THREE.Vector3(...s.lookAt) : null,
     dizzy: !!st.dizzy,
     pounceCharge: s.charge,
-    wiggle: s.gest === 'mash' ? 1 : 0,
+    wiggle: gest === 'mash' ? 1 : 0,
     carrying: s.item === 'salmon' || s.item === 'toyMouse' || s.item === 'sock' ? s.item : null,
+    noodle: !!st.noodle,
+    tossed: !!st.tossed,
   };
 }
 
-export function sitterVisual(s: CharState, speed: number, vy: number, grounded: boolean, ctx: { meter: number; ended: 'win' | 'lose' | null; dark: boolean; aimPitch: number }): SitterVisualState {
+export function sitterVisual(s: CharState, speed: number, vy: number, grounded: boolean, ctx: { meter: number; ended: 'win' | 'lose' | null; dark: boolean; aimPitch: number; heldNoodle?: boolean }): SitterVisualState {
   const st = s.st;
+  const gest = s.gest as string | null;
   let anim: SitterVisualState['anim'] = 'idle';
   if (ctx.ended) anim = ctx.ended === 'win' ? 'celebrate' : 'despair';
+  else if (st.slip) anim = 'slip';
   else if (st.stunned) anim = 'stunned';
-  else if (s.gest === 'spray') anim = 'spray';
-  else if (s.gest === 'treats') anim = 'shakeTreats';
+  else if (gest === 'toss') anim = 'toss';
+  else if (gest === 'clap') anim = 'clap';
+  else if (gest === 'spray') anim = 'spray';
+  else if (gest === 'treats') anim = 'shakeTreats';
   else if (s.holding) anim = 'carry';
   else if (s.work?.anim) anim = s.work.anim as SitterVisualState['anim'];
   else if (!grounded) anim = vy > 0 ? 'jump' : 'fall';
-  else if (st.panic) anim = 'despair';
   else if (speed > 3.6) anim = 'run';
   else if (speed > 0.25) anim = 'walk';
   let face: SitterVisualState['face'] = 'neutral';
   if (ctx.ended) face = ctx.ended === 'win' ? 'happy' : 'shock';
+  else if (st.slip || st.shock) face = 'shock';
+  else if (st.gag) face = 'gag';
   else if (s.work?.face) face = s.work.face as SitterVisualState['face'];
-  else if (st.panic) face = 'panic';
+  else if (st.panic || ctx.meter >= 80) face = 'panic';
+  else if (ctx.heldNoodle) face = 'happy';
   else if (st.smug) face = 'smug';
   else if (st.tired) face = 'tired';
-  else if (s.gest === 'spray') face = 'angry';
+  else if (gest === 'spray' || gest === 'clap') face = 'angry';
   else if (st.stunned) face = 'shock';
-  else if (ctx.meter > 75) face = 'panic';
   return {
     anim, face, speed, vy, grounded, carrying: !!s.holding, flashlight: ctx.dark, aimPitch: ctx.aimPitch,
     lookAt: null,

@@ -18,6 +18,8 @@ export interface BotOption {
   room: RoomId | null;
   interactable: string;  // InteractableDef id
   alert: boolean;        // it is a "disaster" (sitter gets alerted)
+  /** current progress of this use 0..1 when the sim provides it (undo decisions) */
+  progress?: number;
 }
 
 export interface BotWorldView {
@@ -63,8 +65,14 @@ export interface BotIntent {
   hairball?: boolean;
   treats?: boolean;
   loaf?: boolean;
-  /** escape mash (grabbed, caged, hypnotized, fight) */
+  /** escape mash (grabbed, caged, hypnotized, fight: flinch in the staredown, a press in the brawl) */
   mash?: boolean;
+  /** cat: slow push held while true (ADDENDUM M8) */
+  push?: boolean;
+  /** sitter: clap (M5) */
+  clap?: boolean;
+  /** sitter: toss the held cat in this direction (M3) */
+  toss?: Vec3;
 }
 
 export interface BotBrain {

@@ -6,6 +6,12 @@ Loop files (`purr`, `typing`, `scratch`, `waterRun`) have a crossfaded seamless 
 
 Synthesized at runtime with WebAudio (no files): `countdown`, `go`, `win`, `lose`, `alarm`, and all music (`menu`, `game`, `tense`, `catnip`).
 
+Round 2 additions (ADDENDUM M25):
+- `clap`: synthesized at runtime, two 8 ms noise bursts through a 1.8 kHz bandpass, 90 ms apart (the addendum's fallback). No file.
+- `keys`: built at runtime from the CC0 Kenney clinks above (`clink1`-`clink3`), three copies at pitch 1.4 staggered 60 ms. No new file.
+- `shutter`: synthesized at runtime, a sharp bandpassed click, a short whirr, a second click. No file.
+CC0 recordings were not added this round because the sound sites were not reachable from the build machine. Dropping a CC0 `clap1.mp3` / `keys1.mp3` / `shutter1.mp3` into this folder and adding `f: [...]` to its entry in `src/audio/audio.ts` replaces the fallback.
+
 | File | Source | Author | License | URL |
 |---|---|---|---|---|
 | `meow1.mp3` | "cat meow" | tuberatanka | CC0 1.0 | https://freesound.org/people/tuberatanka/sounds/110011/ |

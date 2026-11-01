@@ -30,6 +30,8 @@ export interface GameConfig {
   botDifficulty: Difficulty;
   players: PlayerInfo[]; // final roster incl. bots
   seed: number;
+  /** ?autobot=1: these player ids are driven by the bot brain for their role */
+  autobot?: PlayerId[];
 }
 
 /** Timed statuses, seconds left. Missing = 0. */
@@ -38,9 +40,10 @@ export type StatusKey =
   | 'crown' | 'eating' | 'caged' | 'focused' | 'flehmen' | 'hairball' | 'fight' | 'treat'
   | 'tired' | 'sleep' | 'limp' | 'gag' | 'smug' | 'panic' | 'stink'
   | 'hidden' // hidden: name tag hidden (sitting in the delivery box)
-  | 'noodle' | 'tossed' | 'slip' | 'slipImmune' | 'noLoaf' | 'pushMode';
+  | 'noodle' | 'tossed' | 'slip' | 'slipImmune' | 'noLoaf' | 'pushMode'
+  | 'shock'; // shock: face only (clapped cat, sitter when a disaster lands)
 
-export type Gesture = 'swipe' | 'spray' | 'treats' | 'meow' | 'hiss' | 'mash' | 'drop' | null;
+export type Gesture = 'swipe' | 'spray' | 'treats' | 'meow' | 'hiss' | 'mash' | 'drop' | 'toss' | 'clap' | 'tap' | 'groom' | null;
 
 export interface Work {
   key: string;

@@ -1,0 +1,28 @@
+<svg width="34" height="24" viewBox="9.4 4.2 17 12" fill="none" xmlns="http://www.w3.org/2000/svg">
+<!-- Derived from Microsoft Fluent UI Emoji "Potable water" (potable_water_color.svg, MIT): the tap only, sign and glass removed, recoloured chrome. -->
+<g filter="url(#pw_blur)" opacity=".45"><path d="M16.3602 6.24841C16.3602 5.69613 16.8079 5.24841 17.3602 5.24841H21.3602C21.9125 5.24841 22.3602 5.69613 22.3602 6.24841C22.3602 6.8007 21.9125 7.24841 21.3602 7.24841H20.4602C20.405 7.24841 20.3602 7.29318 20.3602 7.34841V8.14841C20.3602 8.20364 20.405 8.24841 20.4602 8.24841H24.3602C24.9125 8.24841 25.3602 8.69613 25.3602 9.24841V11.2484C25.3602 11.8007 24.9125 12.2484 24.3602 12.2484H16.3602C15.0782 12.2484 14.3602 13.5431 14.3602 14.7295C14.3602 15.0056 14.1363 15.2295 13.8602 15.2295H10.8602C10.5841 15.2295 10.3602 15.0056 10.3602 14.7295C10.3602 11.3079 13.004 8.50373 16.3602 8.24841H18.2602C18.3154 8.24841 18.3602 8.20364 18.3602 8.14841V7.34841C18.3602 7.29318 18.3154 7.24841 18.2602 7.24841H17.3602C16.8079 7.24841 16.3602 6.8007 16.3602 6.24841Z" fill="#4F5A7A" transform="translate(.25 .35)"/></g>
+<g filter="url(#pw_inner)"><path d="M16.3602 6.24841C16.3602 5.69613 16.8079 5.24841 17.3602 5.24841H21.3602C21.9125 5.24841 22.3602 5.69613 22.3602 6.24841C22.3602 6.8007 21.9125 7.24841 21.3602 7.24841H20.4602C20.405 7.24841 20.3602 7.29318 20.3602 7.34841V8.14841C20.3602 8.20364 20.405 8.24841 20.4602 8.24841H24.3602C24.9125 8.24841 25.3602 8.69613 25.3602 9.24841V11.2484C25.3602 11.8007 24.9125 12.2484 24.3602 12.2484H16.3602C15.0782 12.2484 14.3602 13.5431 14.3602 14.7295C14.3602 15.0056 14.1363 15.2295 13.8602 15.2295H10.8602C10.5841 15.2295 10.3602 15.0056 10.3602 14.7295C10.3602 11.3079 13.004 8.50373 16.3602 8.24841H18.2602C18.3154 8.24841 18.3602 8.20364 18.3602 8.14841V7.34841C18.3602 7.29318 18.3154 7.24841 18.2602 7.24841H17.3602C16.8079 7.24841 16.3602 6.8007 16.3602 6.24841Z" fill="url(#pw_chrome)"/></g>
+<path d="M16.9 5.75H21.1M11.4 14.4C11.6 11.9 13.6 9.4 16.4 9" stroke="#fff" stroke-width=".35" stroke-linecap="round" opacity=".85"/>
+<defs>
+<filter id="pw_blur" x="9" y="4" width="18" height="13" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB"><feGaussianBlur stdDeviation=".35"/></filter>
+<filter id="pw_inner" x="9.9" y="4.8" width="15.9" height="10.9" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+<feFlood flood-opacity="0" result="BackgroundImageFix"/>
+<feBlend mode="normal" in="SourceGraphic" in2="BackgroundImageFix" result="shape"/>
+<feColorMatrix in="SourceAlpha" type="matrix" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 127 0" result="hardAlpha"/>
+<feOffset dx="-0.4" dy="0.4"/>
+<feGaussianBlur stdDeviation="0.375"/>
+<feComposite in2="hardAlpha" operator="arithmetic" k2="-1" k3="1"/>
+<feColorMatrix type="matrix" values="0 0 0 0 0.62 0 0 0 0 0.6 0 0 0 0 0.72 0 0 0 1 0"/>
+<feBlend mode="normal" in2="shape" result="effect1_innerShadow"/>
+<feColorMatrix in="SourceAlpha" type="matrix" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 127 0" result="hardAlpha"/>
+<feOffset dx="0.4" dy="-0.4"/>
+<feGaussianBlur stdDeviation="0.2"/>
+<feComposite in2="hardAlpha" operator="arithmetic" k2="-1" k3="1"/>
+<feColorMatrix type="matrix" values="0 0 0 0 1 0 0 0 0 0.988235 0 0 0 0 1 0 0 0 1 0"/>
+<feBlend mode="normal" in2="effect1_innerShadow" result="effect2_innerShadow"/>
+</filter>
+<linearGradient id="pw_chrome" x1="13" y1="5" x2="20" y2="15.5" gradientUnits="userSpaceOnUse">
+<stop stop-color="#FCFBFF"/><stop offset=".42" stop-color="#DCD9E6"/><stop offset=".7" stop-color="#B9B4C8"/><stop offset="1" stop-color="#8F89A3"/>
+</linearGradient>
+</defs>
+</svg>
