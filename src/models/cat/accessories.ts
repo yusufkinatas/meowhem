@@ -25,6 +25,8 @@ interface Part {
   rot?: [number, number, number];
   /** material override, e.g. the see-through vet cone */
   tint?: { color: string; opacity?: number };
+  /** reshape the source (source units, before `pre`): vertices below y = minY collapse onto it, radius capped at maxR */
+  trim?: { minY: number; maxR: number };
 }
 interface Def { parts: Part[]; collar?: string }
 
@@ -40,7 +42,9 @@ const DEFS: Partial<Record<CatAccessory, Def>> = {
   bow: { parts: [{ file: 'bowtie.glb', fit: 'w', size: 0.74, at: [0.3, 0.7, 0.5], y: 'center', rot: [0.15, -0.25, 0.42] }] },
   bell: { collar: '#d9473a', parts: [{ file: 'bell.glb', fit: 'w', size: 0.24, at: [0, -0.33, 0.66], y: 'top', z: 'center' }] },
   flowerCrown: { parts: crown() },
-  cone: { parts: [{ file: 'cone.glb', fit: 'w', size: 2.05, at: [0, -0.02, 1.2], y: 'center', z: 'front', pre: [Math.PI / 2, 0, 0], tint: { color: '#e4f4ff', opacity: 0.55 } }] },
+  cone: { parts: [{ file: 'cone.glb', fit: 'w', size: 2.05, at: [0, -0.02, 1.2], y: 'center', z: 'front', pre: [Math.PI / 2, 0, 0], tint: { color: '#e4f4ff', opacity: 0.55 },
+    // the source is a kitchen funnel: drop its spout (it poked out of the cat's back) and the side tab
+    trim: { minY: 0.75, maxR: 0.97 } }] },
 };
 /** the accessories that have a model (CAT_ACCESSORIES) */
 export const ACCESSORIES = Object.keys(DEFS) as CatAccessory[];
@@ -83,6 +87,22 @@ function fitPart(src: THREE.Object3D, p: Part): THREE.Object3D {
   return placed;
 }
 
+function trimSource(src: THREE.Object3D, t: NonNullable<Part['trim']>) {
+  src.traverse((o) => {
+    const m = o as THREE.Mesh;
+    if (!m.isMesh || m.userData.trimmed) return;
+    m.userData.trimmed = true;
+    const pos = m.geometry.attributes.position as THREE.BufferAttribute;
+    for (let i = 0; i < pos.count; i++) {
+      const x = pos.getX(i), z = pos.getZ(i), r = Math.hypot(x, z), k = r > t.maxR ? t.maxR / r : 1;
+      pos.setXYZ(i, x * k, Math.max(t.minY, pos.getY(i)), z * k);
+    }
+    pos.needsUpdate = true;
+    m.geometry.computeBoundingBox();
+    m.geometry.computeBoundingSphere();
+  });
+}
+
 const files = new Map<string, Promise<THREE.Group | null>>();
 function loadFile(file: string): Promise<THREE.Group | null> {
   let pr = files.get(file);
@@ -112,6 +132,7 @@ function load(a: CatAccessory): Promise<THREE.Object3D | null> {
       const g = new THREE.Group();
       g.name = `acc:${a}`;
       def.parts.forEach((p, i) => {
+        if (p.trim) trimSource(srcs[i]!, p.trim);
         const part = fitPart(srcs[i]!, p);
         if (p.tint) {
           const mat = new THREE.MeshToonMaterial({ color: p.tint.color, gradientMap: gradientMap(), transparent: (p.tint.opacity ?? 1) < 1, opacity: p.tint.opacity ?? 1, depthWrite: false, side: THREE.DoubleSide });

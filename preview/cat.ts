@@ -5,7 +5,7 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { CSS2DRenderer, CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js';
 import type { CatAccessory, CatAnim, CatFace, CatLook, CatModelApi, CatVisualState, FurPattern, SitterModelApi, SitterVisualState } from '../src/shared/contracts';
-import { loadAssets } from '../src/assets/loader';
+import { cloneModel, loadAssets } from '../src/assets/loader';
 import { createCat, CAT_ACCESSORIES } from '../src/models/cat';
 import { createSitterModel } from '../src/registry';
 import { COAT_PRESETS } from '../src/core/profile';
@@ -213,9 +213,12 @@ function view(name: string) {
       c.sitter = sitter;
       c.ss = { anim: 'carry', face: i === 2 ? 'happy' : 'neutral', speed: 0, vy: 0, grounded: true, carrying: true, flashlight: false, aimPitch: 0, lookAt: null };
     });
-    const behind = params.get('side') === '1';
-    camera.position.set(behind ? 2.8 : 0.5, behind ? 1.65 : 2.3, behind ? 0.2 : -3.4);
-    controls.target.set(0, 0.95, 0.1);
+    // front (default), side=1 from the right, side=2 the game's over-shoulder holding camera
+    const side = params.get('side');
+    if (side === '1') camera.position.set(3.4, 1.4, 0.9);
+    else if (side === '2') camera.position.set(-0.9, 1.9, -2.6);
+    else camera.position.set(0.6, 1.35, 3.6);
+    controls.target.set(0.2, 1.05, 0.2);
   } else if (name === 'strip') {
     // one anim at n phases: cell k started k*step seconds before the freeze time (use with &freeze=)
     const anim = (params.get('anim') ?? 'tossed') as CatAnim | 'tossed' | 'noodle';
@@ -237,6 +240,30 @@ function view(name: string) {
     camLook.set(0, 1.0, 5);
     camera.position.set(0, 1.0, 0.75 * n);
     controls.target.set(0, 0.4, 0);
+  } else if (name === 'row') {
+    // anims standing on the real floor, low camera: checks ground contact (no floating, nothing in the floor)
+    const list = (params.get('anims') ?? 'idle,sit,loaf,sleep,eat,poop,hairball,groom').split(',') as CatAnim[];
+    const yaw = +(params.get('yaw') ?? 1.2);
+    list.forEach((a, k) => addCell(look(preset, { chonk: +(params.get('chonk') ?? 0.2) }), (k - (list.length - 1) / 2) * 0.62, 0, a, (s, t) => {
+      s.anim = a; s.face = (params.get('face') as CatFace) ?? 'neutral';
+      s.speed = a === 'walk' || a === 'carryMouth' ? 2.6 : a === 'run' ? 5.8 : 0;
+      s.pounceCharge = 0.8; s.wiggle = a === 'caged' ? 1 : 0; s.puffed = params.get('puff') === '1'; s.wet = +(params.get('wet') ?? 0);
+      if (a === 'tap') s.lookAt = camLook;
+    }, yaw));
+    camLook.set(0, 1.0, 5);
+    camera.position.set(0, +(params.get('camY') ?? 0.12), 0.75 * list.length);
+    controls.target.set(0, 0.12, 0);
+  } else if (name === 'carrier') {
+    // scale check: a caged cat inside the real carrier basket (the sim puts it 0.1 m in front of the basket centre), any yaw
+    [0, Math.PI / 2, -2.688].forEach((yaw, i) => {
+      const x = (i - 1) * 0.9;
+      const basket = cloneModel('carrier');
+      basket.position.set(x, 0, 0);
+      group.add(basket);
+      addCell(look(['orangeTabby', 'tuxedo', 'calico'][i]), x, 0.1, `yaw ${yaw.toFixed(2)}`, (s, t) => { s.anim = 'caged'; s.face = 'sad'; s.wiggle = Math.sin(t * 0.9) > 0.4 ? 1 : 0; }, yaw);
+    });
+    camera.position.set(0.4, 1.1, 1.9);
+    controls.target.set(0, 0.15, 0);
   } else if (name === 'coats') {
     // the menu's coat presets x every pattern (what players can actually pick)
     const pats: FurPattern[] = ['solid', 'tabby', 'tuxedo', 'calico', 'siamese', 'tortie'];

@@ -3,12 +3,12 @@
  * canvas-textured floors, ceiling) + every piece of furniture from downloaded models, tight colliders, ~75 props,
  * spots, spawns, sun patches and a generated nav graph. World visual keys are delegated to ./visuals via LevelRefs.
  *
- *   z=6  +----------------- window -+------- window ---------+
+ *  z=6.6 +----------------- window -+------- window ---------+
  *        |  LIVING  x -9..0         |  KITCHEN  x 0..9        |
  *        |  TV  rug  sofa           arch  counters  fridge    |
  *        |                          |      table              |
- *   z=2.4|                         arch----------arch---------+
- *        |  armchair   cat tree     |  HALLWAY z 0..2.4      front door (x = 9)
+ *   z=3  |                         arch----------arch---------+
+ *        |  armchair   cat tree     |  HALLWAY z 0..3 (camera room) front door (x = 9)
  *   z=0  +----door-------+----------+-door--+-door------------+
  *        | BEDROOM       | BATHROOM         | OFFICE          |
  *        | x -9..-3      | x -3..2          | x 2..9          |
@@ -30,12 +30,15 @@ import { artTexture } from './art';
 const H = 2.6;      // wall height
 const HT = 0.075;   // wall half thickness
 const PI = Math.PI, toN = 0, toS = PI, toE = PI / 2, toW = -PI / 2;
+const NZ = 6.6;     // north exterior wall
+const HZ = 3;       // hallway / kitchen wall: a 3 m hallway leaves the sitter's camera room in front of the south doors
+const DOOR_H = 2.25, ARCH_H = 2.3; // tall enough for the sitter's camera boom to pass under the lintel
 
 // ---------------------------------------------------------------- rooms
 const ROOMS: RoomDef[] = [
-  { id: 'living', name: 'Living room', min: [-9, 0, 0], max: [0, H, 6] },
-  { id: 'kitchen', name: 'Kitchen', min: [0, 0, 2.4], max: [9, H, 6] },
-  { id: 'hallway', name: 'Hallway', min: [0, 0, 0], max: [9, H, 2.4] },
+  { id: 'living', name: 'Living room', min: [-9, 0, 0], max: [0, H, NZ] },
+  { id: 'kitchen', name: 'Kitchen', min: [0, 0, HZ], max: [9, H, NZ] },
+  { id: 'hallway', name: 'Hallway', min: [0, 0, 0], max: [9, H, HZ] },
   { id: 'bedroom', name: 'Bedroom', min: [-9, 0, -6], max: [-3, H, 0] },
   { id: 'bathroom', name: 'Bathroom', min: [-3, 0, -6], max: [2, H, 0] },
   { id: 'office', name: 'Office', min: [2, 0, -6], max: [9, H, 0] },
@@ -59,37 +62,37 @@ interface Op { a: number; b: number; y0: number; y1: number; kind: OpKind; key?:
 /** axis 'x': runs along x at z = at. axis 'z': runs along z at x = at. */
 interface Wall { axis: 'x' | 'z'; at: number; from: number; to: number; ops?: Op[] }
 const win = (a: number, b: number, y0: number, y1: number, key?: RefKey): Op => ({ a, b, y0, y1, kind: 'window', key });
-const door = (a: number, b: number): Op => ({ a, b, y0: 0, y1: 2.1, kind: 'door' });
-const arch = (a: number, b: number): Op => ({ a, b, y0: 0, y1: 2.15, kind: 'arch' });
+const door = (a: number, b: number): Op => ({ a, b, y0: 0, y1: DOOR_H, kind: 'door' });
+const arch = (a: number, b: number): Op => ({ a, b, y0: 0, y1: ARCH_H, kind: 'arch' });
 const E = 9 + HT;
 const WALLS: Wall[] = [
   // exterior
-  { axis: 'x', at: 6, from: -E, to: 0, ops: [win(-7.2, -5.0, 0.25, 2.25, 'livingWindow')] },
-  { axis: 'x', at: 6, from: 0, to: E, ops: [win(3.1, 4.25, 1.15, 2.05)] },
+  { axis: 'x', at: NZ, from: -E, to: 0, ops: [win(-7.2, -5.0, 0.25, 2.25, 'livingWindow')] },
+  { axis: 'x', at: NZ, from: 0, to: E, ops: [win(3.1, 4.25, 1.15, 2.05)] },
   { axis: 'x', at: -6, from: -E, to: -3 },
   { axis: 'x', at: -6, from: -3, to: 2, ops: [win(-1.1, -0.1, 1.55, 2.1)] },
   { axis: 'x', at: -6, from: 2, to: E, ops: [win(4.6, 6.2, 0.95, 2.1)] },
   { axis: 'z', at: -9, from: -6 - HT, to: 0, ops: [win(-2.25, -0.95, 0.95, 2.1)] },
-  { axis: 'z', at: -9, from: 0, to: 6 + HT },
+  { axis: 'z', at: -9, from: 0, to: NZ + HT },
   { axis: 'z', at: 9, from: -6 - HT, to: 0, ops: [win(-3.9, -2.5, 0.95, 2.1)] },
-  { axis: 'z', at: 9, from: 0, to: 2.4, ops: [{ a: 0.75, b: 1.65, y0: 0, y1: 2.1, kind: 'front' }] },
-  { axis: 'z', at: 9, from: 2.4, to: 6 + HT },
+  { axis: 'z', at: 9, from: 0, to: HZ, ops: [{ a: 1.05, b: 1.95, y0: 0, y1: 2.2, kind: 'front' }] },
+  { axis: 'z', at: 9, from: HZ, to: NZ + HT },
   // interior
   { axis: 'x', at: 0, from: -9, to: -3, ops: [door(-4.22, -3.22)] },
   { axis: 'x', at: 0, from: -3, to: 0 },
   { axis: 'x', at: 0, from: 0, to: 2, ops: [door(0.8, 1.8)] },
   { axis: 'x', at: 0, from: 2, to: 9, ops: [door(2.2, 3.2)] },
-  { axis: 'z', at: 0, from: 0, to: 2.4, ops: [arch(0.95, 2.25)] },
-  { axis: 'z', at: 0, from: 2.4, to: 6, ops: [arch(3.2, 4.8)] },
-  { axis: 'x', at: 2.4, from: 0, to: 9, ops: [arch(5.0, 6.8)] },
+  { axis: 'z', at: 0, from: 0, to: HZ, ops: [arch(0.95, 2.55)] },
+  { axis: 'z', at: 0, from: HZ, to: NZ, ops: [arch(3.8, 5.4)] },
+  { axis: 'x', at: HZ, from: 0, to: 9, ops: [arch(5.0, 6.8)] },
   { axis: 'z', at: -3, from: -6, to: 0 },
   { axis: 'z', at: 2, from: -6, to: 0 },
 ];
 
 const DOORS: DoorDef[] = [
-  { id: 'bedroomDoor', hinge: [-3.22, 0, 0], width: 1, height: 2.1, closedYaw: PI, openYaw: PI / 2 },
-  { id: 'bathroomDoor', hinge: [1.8, 0, 0], width: 1, height: 2.1, closedYaw: PI, openYaw: PI / 2 },
-  { id: 'officeDoor', hinge: [2.2, 0, 0], width: 1, height: 2.1, closedYaw: 0, openYaw: PI / 2 },
+  { id: 'bedroomDoor', hinge: [-3.22, 0, 0], width: 1, height: DOOR_H, closedYaw: PI, openYaw: PI / 2 },
+  { id: 'bathroomDoor', hinge: [1.8, 0, 0], width: 1, height: DOOR_H, closedYaw: PI, openYaw: PI / 2 },
+  { id: 'officeDoor', hinge: [2.2, 0, 0], width: 1, height: DOOR_H, closedYaw: 0, openYaw: PI / 2 },
 ];
 
 // ---------------------------------------------------------------- merged vertex-colored architecture
@@ -237,7 +240,7 @@ export function buildHouse(): LevelData {
   group.add(archMesh);
   // tiled surfaces on walls: bathroom wainscot + kitchen backsplash (canvas texture, world-space UVs)
   const backsplash = [{ w: WALLS[1], sign: -1, a: 1.875, b: 3.1, y0: 0.92, y1: 1.5 }, { w: WALLS[1], sign: -1, a: 3.1, b: 4.25, y0: 0.92, y1: 1.12 },
-    { w: WALLS[1], sign: -1, a: 4.25, b: 8.925, y0: 0.92, y1: 1.5 }, { w: WALLS[9], sign: -1, a: 3.675, b: 5.925, y0: 0.92, y1: 1.5 }];
+    { w: WALLS[1], sign: -1, a: 4.25, b: 8.925, y0: 0.92, y1: 1.5 }, { w: WALLS[9], sign: -1, a: 4.275, b: 6.525, y0: 0.92, y1: 1.5 }];
   for (const [list, kind] of [[tiles, 'wallTile'], [backsplash, 'kitchenTile']] as const) {
     const geos: THREE.BufferGeometry[] = [];
     for (const t of list) {
@@ -272,9 +275,9 @@ export function buildHouse(): LevelData {
     group.add(m);
   }
   {
-    const g = new THREE.PlaneGeometry(18.2, 12.2);
+    const g = new THREE.PlaneGeometry(18.2, 12.2 + NZ - 6);
     g.rotateX(PI / 2);
-    g.translate(0, H, 0);
+    g.translate(0, H, (NZ - 6) / 2);
     const ceiling = new THREE.Mesh(g, toon('#fbf1e3', { emissive: '#fff4e6', emissiveIntensity: 0.25 }));
     ceiling.name = 'ceiling';
     group.add(ceiling);
@@ -288,8 +291,8 @@ export function buildHouse(): LevelData {
     ground.name = 'ground';
     group.add(ground);
   }
-  colliders.push({ center: [0, -0.25, 0], half: [9.6, 0.25, 6.6], tag: 'floor' });
-  colliders.push({ center: [0, H + 0.2, 0], half: [9.6, 0.2, 6.6], tag: 'ceiling' });
+  colliders.push({ center: [0, -0.25, (NZ - 6) / 2], half: [9.6, 0.25, 6.6 + (NZ - 6) / 2], tag: 'floor' });
+  colliders.push({ center: [0, H + 0.2, (NZ - 6) / 2], half: [9.6, 0.2, 6.6 + (NZ - 6) / 2], tag: 'ceiling' });
 
   // ---- model placement
   const statics: THREE.Object3D[] = [];
@@ -331,7 +334,7 @@ export function buildHouse(): LevelData {
   /** wall frame with a painted canvas on its picture surface */
   const artPlane = new THREE.PlaneGeometry(0.37, 0.47);
   const frame = (x: number, z: number, yaw: number, y: number, art: number, s = 1) =>
-    put('wallFrame', x, z, yaw, {
+    put('wallFrame', x - Math.sin(yaw) * 0.05, z - Math.cos(yaw) * 0.05, yaw, {
       y, s,
       prep: (g) => {
         const m = new THREE.Mesh(artPlane, toon('#ffffff', { map: artTexture(art) }));
@@ -358,28 +361,32 @@ export function buildHouse(): LevelData {
   }
 
   // ---------------------------------------------------------------- LIVING
-  put('tvStand', -8.675, 3.0, toE, { box: 'full', surf: [[-0.42, 0.55, 0]] });
-  put('tv', -8.7, 2.8, toE, { y: 0.55, ref: 'tv', box: [[-0.36, 0, -0.22, 0.36, 0.52, 0.22]], surf: [[0, 0.52, 0]] });
-  put('wallShelf', -8.775, 3.0, toE, { y: 1.62, box: 'full' });
-  put('rug', -6.9, 3.0, toE, { ref: 'livingRug' });
-  colliders.push({ center: [-6.9, 0.01, 3.0], half: [0.9, 0.01, 1.3], tag: 'rug' });
-  put('coffeeTable', -6.85, 3.0, toE, { box: 'full', surf: [[-0.3, 0.45, 0], [0.3, 0.45, 0]] });
-  put('sofa', -5.25, 3.0, toW, {
+  put('tvStand', -8.675, 3.3, toE, { box: 'full', surf: [[-0.42, 0.55, 0]] });
+  put('tv', -8.7, 3.1, toE, { y: 0.55, ref: 'tv', box: [[-0.36, 0, -0.22, 0.36, 0.52, 0.22]], surf: [[0, 0.52, 0]] });
+  put('wallShelf', -8.775, 3.3, toE, { y: 1.62, box: [[-0.6, 0, -0.15, 0.6, 0.12, 0.15], [-0.4, 0.12, -0.15, 0.48, 0.42, 0.05]] }); // board + its books
+  put('rug', -6.9, 3.3, toE, { ref: 'livingRug' });
+  colliders.push({ center: [-6.9, 0.01, 3.3], half: [0.9, 0.01, 1.3], tag: 'rug' });
+  put('coffeeTable', -6.85, 3.3, toE, { box: 'full', surf: [[-0.3, 0.45, 0], [0.3, 0.45, 0]] });
+  put('sofa', -5.25, 3.3, toW, {
     ref: 'sofa',
     box: [[-0.8, 0, -0.02, 0.8, 0.33, 0.53, 'soft'], [-0.8, 0, -0.27, 0.8, 0.55, -0.02], [-0.8, 0, -0.53, 0.8, 0.8, -0.27],
-      [-1, 0, -0.53, -0.8, 0.62, 0.53], [0.8, 0, -0.53, 1, 0.62, 0.53]],
-    surf: [[-0.45, 0.33, 0.25], [0.45, 0.33, 0.25], [0, 0.8, -0.4], [-0.9, 0.62, 0.1], [0.9, 0.62, 0.1]],
+      [-1, 0, -0.53, -0.8, 0.66, 0.53], [0.8, 0, -0.53, 1, 0.66, 0.53]],
+    surf: [[-0.45, 0.33, 0.25], [0.45, 0.33, 0.25], [0, 0.8, -0.4], [-0.9, 0.66, 0.1], [0.9, 0.66, 0.1]],
   });
-  for (const z of [1.75, 4.25]) put('sideTable', -5.25, z, toW, { box: 'full', surf: [[0, 0.6, 0]] });
-  put('curtains', -6.1, 5.79, toS, { s: [1.45, 1, 1], ref: 'curtains', prep: (g) => drawOpen(g, 0.45) });
-  put('tvStand', -8.675, 5.15, toE, { box: 'full', surf: [[0.45, 0.55, 0]] }); // fish tank cabinet
-  put('aquarium', -8.66, 5.35, toE, { y: 0.55, ref: 'aquarium', box: [[-0.45, 0, -0.29, 0.45, 0.62, 0.29]], surf: [[0, 0.62, 0]] });
-  put('bookshelf', -3.95, 5.5, toE, { // open back, side to the wall: swiped books fly out the back
+  for (const z of [2.05, 4.55]) put('sideTable', -5.25, z, toW, { box: 'full', surf: [[0, 0.6, 0]] });
+  // the two gathered panels + the rod: thin colliders so the camera never ends up inside the fabric
+  put('curtains', -6.1, NZ - 0.21, toS, {
+    s: [1.45, 1, 1], ref: 'curtains', prep: (g) => drawOpen(g, 0.45),
+    box: [[-1.33, 0, -0.12, -0.78, 2.32, 0.12], [0.78, 0, -0.12, 1.33, 2.32, 0.12], [-0.78, 2.02, -0.12, 0.78, 2.32, 0.12]],
+  });
+  put('tvStand', -8.675, 5.75, toE, { box: 'full', surf: [[0.45, 0.55, 0]] }); // fish tank cabinet
+  put('aquarium', -8.66, 5.95, toE, { y: 0.55, ref: 'aquarium', box: [[-0.45, 0, -0.29, 0.45, 0.62, 0.29]], surf: [[0, 0.62, 0]] });
+  put('bookshelf', -3.95, 6.1, toE, { // open back, side to the wall: swiped books fly out the back
     box: [[-0.41, 0, -0.255, -0.37, 1.8, 0.255], [0.37, 0, -0.255, 0.41, 1.8, 0.255], [-0.41, 0, -0.255, 0.41, 0.27, 0.255],
-      [-0.37, 0.73, -0.255, 0.37, 0.76, 0.255], [-0.37, 1.22, -0.255, 0.37, 1.25, 0.255], [-0.41, 1.7, -0.255, 0.41, 1.74, 0.255]],
-    surf: [[0, 0.27, 0.05]],
+      [-0.37, 0.6, -0.255, 0.37, 0.76, 0.255], [-0.37, 1.13, -0.255, 0.37, 1.25, 0.255], [-0.41, 1.6, -0.255, 0.41, 1.74, 0.255]],
   });
-  put('plant', -0.7, 5.3, toS, { ref: 'bigPlant', box: [[-0.17, 0, -0.17, 0.17, 0.32, 0.17]] });
+  // big plants: pot + a foliage block, so nobody walks through the leaves and the camera stops at them
+  put('plant', -0.7, 5.9, toS, { ref: 'bigPlant', box: [[-0.28, 0, -0.28, 0.28, 1.1, 0.28]] });
   put('catTree', -0.6, 0.5, toW, {
     ref: 'catTree',
     box: [[-0.41, 0, 0.15, 0.41, 0.8, 0.45], [-0.41, 0, -0.45, 0.41, 1.46, 0.05], [-0.41, 0, -0.45, 0.41, 0.05, 0.45]],
@@ -387,69 +394,72 @@ export function buildHouse(): LevelData {
   });
   put('armchair', -8.05, 0.9, PI / 4, {
     box: [[-0.4, 0, -0.02, 0.4, 0.33, 0.53, 'soft'], [-0.4, 0, -0.27, 0.4, 0.55, -0.02], [-0.4, 0, -0.53, 0.4, 0.8, -0.27],
-      [-0.6, 0, -0.53, -0.4, 0.62, 0.53], [0.4, 0, -0.53, 0.6, 0.62, 0.53]],
+      [-0.6, 0, -0.53, -0.4, 0.66, 0.53], [0.4, 0, -0.53, 0.6, 0.66, 0.53]],
     surf: [[0, 0.33, 0.22]],
   });
-  const lampL = put('floorLamp', -8.55, 2.0, toE, { box: [[-0.05, 0, -0.05, 0.05, 1.6, 0.05]] });
-  put('plantTall', -2.3, 0.5, toN, { box: [[-0.18, 0, -0.18, 0.18, 0.4, 0.18]] });
+  const lamp: PutOpts = { box: [[-0.05, 0, -0.05, 0.05, 1.2, 0.05], [-0.27, 1.2, -0.27, 0.27, 1.6, 0.27]] }; // pole + shade
+  const lampL = put('floorLamp', -8.55, 2.3, toE, lamp);
+  const tallPlant: PutOpts = { box: [[-0.3, 0, -0.28, 0.3, 1.25, 0.28]] };
+  put('plantTall', -2.3, 0.5, toN, tallPlant);
   frame(-6.9, 0.125, toN, 1.25, 1);
   frame(-6.25, 0.125, toN, 1.15, 0, 0.8);
-  frame(-0.125, 2.72, toW, 1.2, 2);
+  frame(-0.125, 3.17, toW, 1.2, 2);
 
   // ---------------------------------------------------------------- KITCHEN (north run faces south, east run faces west)
-  put('counterCorner', 8.4, 5.4, toS, { box: 'full', surf: [[0, 0.92, 0]] });
-  put('counter', 7.275, 5.615, toS, { box: 'full', surf: [[0, 0.92, 0.05]] });
-  put('stove', 6.075, 5.579, toS, { ref: 'stove', box: [[-0.6, 0, -0.346, 0.6, 0.92, 0.346], [-0.6, 0, -0.346, 0.6, 1.2, -0.22]], surf: [[0, 0.92, 0.15]] });
-  put('counter', 4.875, 5.615, toS, { box: 'full', surf: [[0, 0.92, 0.05]] });
-  put('kitchenSink', 3.675, 5.615, toS, { box: [[-0.6, 0, -0.31, 0.6, 0.92, 0.31]], surf: [[0.38, 0.92, 0.12], [-0.38, 0.92, 0.12]] });
-  put('counter', 2.475, 5.615, toS, { box: 'full', surf: [[0.2, 0.92, 0.05]] });
-  put('counter', 8.615, 4.275, toW, { box: 'full', surf: [[0, 0.92, 0.05]] });
-  put('fridge', 8.585, 3.216, toW, { ref: 'fridge', box: 'full', surf: [[0, 1.85, 0]] });
-  put('extractorHood', 6.075, 5.589, toS, { y: 1.42, s: [1, 0.95, 1], box: 'full' });
-  for (const x of [7.275, 4.875, 2.475]) put('wallCabinet', x, 5.725, toS, { y: 1.5, box: 'full' });
-  put('wallCabinet', 8.725, 4.275, toW, { y: 1.5, box: 'full', surf: [[0, 0.6, 0]] });
-  put('cuttingBoard', 2.3, 5.6, toS, { y: 0.92, box: 'full' });
-  put('kettle', 7.45, 5.68, toS, { y: 0.92, box: 'full' });
-  put('toaster', 8.7, 4.65, toW, { y: 0.92, box: 'full' });
-  put('bread', 8.68, 3.95, toW, { y: 0.92, box: 'full' });
-  put('diningTable', 3.4, 3.75, toN, {
-    box: [[-0.6, 0.47, -0.45, 0.6, 0.75, 0.45], [-0.58, 0, -0.43, -0.48, 0.47, -0.33], [0.48, 0, -0.43, 0.58, 0.47, -0.33],
-      [-0.58, 0, 0.33, -0.48, 0.47, 0.43], [0.48, 0, 0.33, 0.58, 0.47, 0.43]],
+  put('counterCorner', 8.4, 6.0, toS, { box: 'full', surf: [[0, 0.92, 0]] });
+  put('counter', 7.275, 6.215, toS, { box: 'full', surf: [[0, 0.92, 0.05]] });
+  put('stove', 6.075, 6.179, toS, { ref: 'stove', box: [[-0.6, 0, -0.346, 0.6, 0.92, 0.346], [-0.6, 0, -0.346, 0.6, 1.2, -0.22]], surf: [[0, 0.92, 0.15]] });
+  put('counter', 4.875, 6.215, toS, { box: 'full', surf: [[0, 0.92, 0.05]] });
+  // the manifest stretches the chunky sink 2.2x in height vs depth: the faucet stood 0.7 m tall (taller than a cat)
+  put('kitchenSink', 3.675, 6.215, toS, { prep: (g) => squashAbove(g, 0.93, 0.5), box: [[-0.6, 0, -0.31, 0.6, 0.92, 0.31]], surf: [[0.38, 0.92, 0.12], [-0.38, 0.92, 0.12]] });
+  put('counter', 2.475, 6.215, toS, { box: 'full', surf: [[0.2, 0.92, 0.05]] });
+  put('counter', 8.615, 4.875, toW, { box: 'full', surf: [[0, 0.92, 0.05]] });
+  put('fridge', 8.585, 3.816, toW, { ref: 'fridge', box: 'full', surf: [[0, 1.85, 0]] });
+  put('extractorHood', 6.075, 6.189, toS, { y: 1.45, s: [1, 0.95, 1], box: 'full' }); // 0.53 above the hob: no cat wedges under it
+  for (const x of [7.275, 4.875, 2.475]) put('wallCabinet', x, 6.325, toS, { y: 1.5, box: 'full' });
+  put('wallCabinet', 8.725, 4.875, toW, { y: 1.5, box: 'full', surf: [[0, 0.6, 0]] });
+  put('cuttingBoard', 2.3, 6.2, toS, { y: 0.92, box: 'full' });
+  put('kettle', 7.45, 6.28, toS, { y: 0.92, box: 'full' });
+  put('toaster', 8.7, 5.25, toW, { y: 0.92, box: 'full' });
+  put('bread', 8.68, 4.55, toW, { y: 0.92, box: 'full' });
+  put('diningTable', 3.4, 4.35, toN, {
+    box: [[-0.6, 0.62, -0.45, 0.6, 0.75, 0.45], [-0.58, 0, -0.43, -0.48, 0.62, -0.33], [0.48, 0, -0.43, 0.58, 0.62, -0.33],
+      [-0.58, 0, 0.33, -0.48, 0.62, 0.43], [0.48, 0, 0.33, 0.58, 0.62, 0.43]],
     surf: [[-0.45, 0.75, 0], [0.45, 0.75, 0], [0, 0.75, -0.3], [0, 0.75, 0.3]],
   });
-  put('fruitBowl', 3.4, 3.95, toN, { y: 0.75, box: 'full' });
+  put('fruitBowl', 3.4, 4.55, toN, { y: 0.75, box: 'full' });
   const chair: PutOpts = { box: [[-0.25, 0, -0.12, 0.25, 0.36, 0.3], [-0.25, 0, -0.3, 0.25, 0.88, -0.12]], surf: [[0, 0.36, 0.1]] };
-  put('chair', 2.45, 3.75, toE, chair);
-  put('chair', 4.35, 3.75, toW, chair);
-  put('chair', 3.05, 3.0, toN, chair);
-  put('chair', 3.8, 3.0, toN, chair);
-  put('foodBowl', 1.15, 5.6, toS, { ref: 'foodBowl' });
-  put('carrier', 1.4, 2.85, toN, { ref: 'carrier', box: [[-0.31, 0, -0.23, 0.31, 0.36, 0.23]], surf: [[0, 0.36, 0]] });
+  put('chair', 2.45, 4.35, toE, chair);
+  put('chair', 4.35, 4.35, toW, chair);
+  put('chair', 3.05, 3.6, toN, chair);
+  put('chair', 3.8, 3.6, toN, chair);
+  put('foodBowl', 1.15, 6.2, toS, { ref: 'foodBowl' });
+  put('carrier', 1.4, 3.45, toN, { ref: 'carrier', box: [[-0.31, 0, -0.23, 0.31, 0.36, 0.23]], surf: [[0, 0.36, 0]] });
 
   // ---------------------------------------------------------------- HALLWAY
   {
     const info = modelInfo('frontDoor');
     const pivot = new THREE.Group();
     pivot.name = 'frontDoorPivot';
-    pivot.position.set(9, 0, 0.75);
+    pivot.position.set(9, 0, 1.05);
     pivot.rotation.y = PI / 2;
     pivot.userData = { closedYaw: PI / 2, openYaw: PI / 2 - 1.45 };
     if (info && hasModel('frontDoor')) {
       const leaf = cloneModel('frontDoor');
       const sx = 0.9 / info.size[0];
-      leaf.scale.set(sx, 1, 0.65);
+      leaf.scale.set(sx, 2.2 / info.size[1], 0.65);
       leaf.position.x = -info.size[0] * sx / 2;
       pivot.add(leaf);
     }
     group.add(pivot);
     objects.set('frontDoor', pivot);
   }
-  put('doormat', 8.45, 1.2, toW, {});
-  put('shoeRack', 7.8, 2.2, toS, { box: [[-0.3, 0, -0.12, 0.3, 0.47, 0.12], [0.1, 0.47, -0.1, 0.3, 0.75, 0.1]], surf: [[-0.12, 0.47, 0]] });
-  put('fuseBox', 7.8, 2.29, toS, { y: 1.05, ref: 'fuseBox', box: 'full' });
-  put('boots', 7.2, 2.12, toS, { box: 'full' });
-  put('coatRack', 8.5, 2.0, -2.4, { s: 0.8, box: [[-0.08, 0, -0.08, 0.08, 1.75 * 0.8, 0.08]] });
-  put('plantSmall', 4.7, 2.15, toS, { box: [[-0.14, 0, -0.12, 0.14, 0.3, 0.12]] });
+  put('doormat', 8.45, 1.5, toW, {});
+  put('shoeRack', 7.8, HZ - 0.2, toS, { box: [[-0.3, 0, -0.12, 0.3, 0.47, 0.12], [0.1, 0, -0.1, 0.3, 0.75, 0.1]], surf: [[-0.12, 0.47, 0]] });
+  put('fuseBox', 7.8, HZ - 0.11, toS, { y: 1.05, ref: 'fuseBox', box: 'full' });
+  put('boots', 7.2, HZ - 0.28, toS, { box: 'full' });
+  put('coatRack', 8.5, HZ - 0.4, -2.4, { s: 0.8, box: [[-0.08, 0, -0.08, 0.08, 1.05, 0.08], [-0.28, 1.05, -0.28, 0.28, 1.4, 0.28]] });
+  put('plantSmall', 4.7, HZ - 0.25, toS, { box: [[-0.14, 0, -0.12, 0.14, 0.3, 0.12]] });
   frame(4.3, 0.125, toN, 1.2, 4, 0.8);
   frame(5.0, 0.125, toN, 1.3, 3);
   frame(5.7, 0.125, toN, 1.2, 2, 0.8);
@@ -464,8 +474,10 @@ export function buildHouse(): LevelData {
   put('bathMat', -2.0, -4.35, toN, {});
   put('toilet', 1.45, -5.565, toN, { box: [[-0.2, 0, -0.15, 0.2, 0.42, 0.36], [-0.25, 0, -0.36, 0.25, 0.8, -0.15]], surf: [[0, 0.42, 0.12], [0, 0.8, -0.25]] });
   put('tpHolder', 1.88, -4.85, toW, { y: 0.62, ref: 'tpHolder' });
-  put('shelf', 1.35, -5.775, toN, { y: 1.28, box: [[-0.6, 0.2, -0.15, 0.6, 0.24, 0.15]], surf: [[0.35, 0.24, 0]] });
-  put('bathSink', -2.575, -3.2, toE, { s: [1, 1.45, 1], box: [[-0.46, 0, -0.35, 0.46, 0.52, 0.35], [-0.32, 0.52, -0.12, 0.32, 0.62, 0.33]], surf: [[0, 0.62, 0.1]] });
+  // beside the toilet, not over it: a cat on the tank jumps up onto it instead of into its underside
+  put('shelf', 0.6, -5.775, toN, { y: 1.28, box: [[-0.6, 0.2, -0.15, 0.6, 0.24, 0.15]], surf: [[0.35, 0.24, 0]] });
+  // uniform 1.3: vanity 0.47, vessel bowl rim 0.72 (a cat sits in the bowl at 0.58)
+  put('bathSink', -2.47, -3.2, toE, { s: 1.3, box: [[-0.6, 0, -0.455, 0.6, 0.47, 0.455], [-0.36, 0.47, -0.2, 0.36, 0.58, 0.42]], surf: [[0, 0.58, 0.1]] });
   put('mirror', -2.9, -3.2, toE, { y: 1.35 });
   put('washer', -2.54, -2.1, toE, { box: 'full', surf: [[0.1, 0.85, 0.1]] });
   put('towels', -2.6, -2.25, toE, { y: 0.85, box: 'full' });
@@ -477,7 +489,7 @@ export function buildHouse(): LevelData {
     ref: 'bed',
     prep: (g) => stretchLegs(g, 0.072, 0.4),
     box: [[-1.03, 0.48, -0.8, 1.03, 0.76, 1.05, 'soft'], [-0.83, 0.48, -0.75, -0.13, 0.93, -0.27, 'soft'], [0.07, 0.48, -0.75, 0.87, 0.93, -0.27, 'soft'],
-      [-1.08, 0.47, -1.05, 1.08, 1.1, -0.8], [-1.08, 0, -1.05, 1.08, 0.47, 1.05, 'catOnly'],
+      [-1.08, 0.48, -1.05, 1.08, 1.1, -0.8], [-1.08, 0, -1.05, 1.08, 0.47, 1.05, 'catOnly'],
       [-1.08, 0, -1.05, -0.96, 0.48, -0.93], [0.96, 0, -1.05, 1.08, 0.48, -0.93], [-1.08, 0, 0.93, -0.96, 0.48, 1.05], [0.96, 0, 0.93, 1.08, 0.48, 1.05]],
     // nodes 0.15 m inside the edges: a bot jumps from ~0.8 m out, early enough to clear the open underside
     surf: [[0, 0.76, 0.9], [0.88, 0.76, 0.35], [-0.88, 0.76, 0.35], [0.88, 0.76, -0.3], [-0.88, 0.76, -0.3], [0, 0.76, 0.3]],
@@ -489,14 +501,14 @@ export function buildHouse(): LevelData {
   put('rugRound', -5.75, -3.4, toE, { ref: 'bedroomRug' });
   colliders.push({ center: [-5.75, 0.01, -3.4], half: [0.7, 0.01, 1.0], tag: 'rug' });
   put('wardrobe', -5.3, -5.64, toN, { box: 'full' });
-  put('laundryBasket', -3.55, -1.55, toW, { ref: 'laundryBasket', box: [[-0.26, 0, -0.2, 0.26, 0.2, 0.2]], surf: [[0, 0.2, 0]] });
+  put('laundryBasket', -3.45, -3.1, toW, { ref: 'laundryBasket', box: [[-0.26, 0, -0.2, 0.26, 0.2, 0.2]], surf: [[0, 0.2, 0]] });
   put('plantSmall', -3.45, -5.6, toN, { box: [[-0.14, 0, -0.12, 0.14, 0.3, 0.12]] });
   frame(-8.875, -3.4, toE, 1.35, 5);
 
   // ---------------------------------------------------------------- OFFICE
   put('desk', 5.4, -5.575, toN, {
-    box: [[-0.7, 0.47, -0.35, 0.7, 0.75, 0.35], [-0.68, 0, -0.33, -0.58, 0.47, -0.23], [0.58, 0, -0.33, 0.68, 0.47, -0.23],
-      [-0.68, 0, 0.23, -0.58, 0.47, 0.33], [0.58, 0, 0.23, 0.68, 0.47, 0.33]],
+    box: [[-0.7, 0.62, -0.35, 0.7, 0.75, 0.35], [-0.68, 0, -0.33, -0.58, 0.62, -0.23], [0.58, 0, -0.33, 0.68, 0.62, -0.23],
+      [-0.68, 0, 0.23, -0.58, 0.62, 0.33], [0.58, 0, 0.23, 0.68, 0.62, 0.33]],
     surf: [[0.45, 0.75, 0.2], [-0.45, 0.75, 0.2], [0.05, 0.75, 0.2]],
   });
   put('laptop', 5.05, -5.66, toN, { y: 0.75, ref: 'laptop' });
@@ -505,22 +517,21 @@ export function buildHouse(): LevelData {
   put('nightstand', 2.36, -2.2, toE, { box: 'full', surf: [[0, 0.55, 0]] });
   put('bookshelf', 6.3, -0.33, toS, {
     box: [[-0.41, 0, -0.255, -0.37, 1.8, 0.255], [0.37, 0, -0.255, 0.41, 1.8, 0.255], [-0.41, 0, -0.255, 0.41, 0.27, 0.255],
-      [-0.37, 0.73, -0.255, 0.37, 0.76, 0.255], [-0.37, 1.22, -0.255, 0.37, 1.25, 0.255], [-0.41, 1.7, -0.255, 0.41, 1.74, 0.255]],
-    surf: [[0, 0.27, 0.05]],
+      [-0.37, 0.6, -0.255, 0.37, 0.76, 0.255], [-0.37, 1.13, -0.255, 0.37, 1.25, 0.255], [-0.41, 1.6, -0.255, 0.41, 1.74, 0.255]],
   });
   put('armchair', 8.15, -1.0, -3 * PI / 4, {
     box: [[-0.4, 0, -0.02, 0.4, 0.33, 0.53, 'soft'], [-0.4, 0, -0.27, 0.4, 0.55, -0.02], [-0.4, 0, -0.53, 0.4, 0.8, -0.27],
-      [-0.6, 0, -0.53, -0.4, 0.62, 0.53], [0.4, 0, -0.53, 0.6, 0.62, 0.53]],
+      [-0.6, 0, -0.53, -0.4, 0.66, 0.53], [0.4, 0, -0.53, 0.6, 0.66, 0.53]],
     surf: [[0, 0.33, 0.22]],
   });
-  const lampO = put('floorLamp', 8.55, -2.05, toW, { box: [[-0.05, 0, -0.05, 0.05, 1.6, 0.05]] });
+  const lampO = put('floorLamp', 8.55, -2.05, toW, lamp);
   // an empty delivery box nobody threw away: cats sit in it
   put('packageOpen', 3.3, -5.35, 0.35, {
     box: [[-0.25, 0, -0.25, 0.25, 0.02, 0.25], [-0.25, 0, -0.25, -0.23, 0.29, 0.25], [0.23, 0, -0.25, 0.25, 0.29, 0.25],
       [-0.25, 0, -0.25, 0.25, 0.29, -0.23], [-0.25, 0, 0.23, 0.25, 0.29, 0.25]],
     surf: [[0, 0.02, 0]],
   });
-  put('plantTall', 8.35, -5.4, toN, { box: [[-0.18, 0, -0.18, 0.18, 0.4, 0.18]] });
+  put('plantTall', 8.35, -5.4, toN, tallPlant);
   frame(7.4, -0.125, toS, 1.3, 0);
   frame(4.2, -0.125, toS, 1.25, 4, 0.8);
 
@@ -528,8 +539,8 @@ export function buildHouse(): LevelData {
   for (const [x, z, k, yaw] of [
     [-8.2, 10.2, 'treeLarge', 0.4], [-3.6, 11.5, 'tree', 1.1], [2.6, 9.8, 'tree', 2.0], [7.4, 11.0, 'treeLarge', 0.2],
     [-12.2, -2.4, 'tree', 0.7], [5.6, -10.2, 'treeLarge', 1.4], [12.4, -2.0, 'tree', 2.6], [-11.5, 5.0, 'tree', 0.1], [12.0, 6.5, 'tree', 1.9],
-    [-6.6, 7.0, 'bush', 0.3], [-4.4, 7.2, 'bush', 1.7], [3.2, 6.9, 'bush', 2.4], [5.4, 7.1, 'bush', 0.9], [-9.9, -1.2, 'bush', 1.1],
-    [4.6, -6.9, 'bush', 0.2], [6.6, -7.0, 'bush', 2.2], [9.9, -3.0, 'bush', 0.6], [9.8, 0.1, 'bush', 1.4], [9.8, 2.3, 'bush', 2.9],
+    [-6.6, 7.6, 'bush', 0.3], [-4.4, 7.8, 'bush', 1.7], [3.2, 7.5, 'bush', 2.4], [5.4, 7.7, 'bush', 0.9], [-9.9, -1.2, 'bush', 1.1],
+    [4.6, -6.9, 'bush', 0.2], [6.6, -7.0, 'bush', 2.2], [9.9, -3.0, 'bush', 0.6], [9.8, 0.1, 'bush', 1.4], [9.85, 2.95, 'bush', 2.9],
   ] as [number, number, string, number][]) put(k, x, z, yaw);
   for (let x = -16; x <= 16; x += 1.85) { put('fence', x, 14, 0); put('fence', x, -13, 0); }
 
@@ -552,6 +563,10 @@ export function buildHouse(): LevelData {
     group.add(pivot);
     doorPivots.set(d.id, pivot);
     objects.set(d.id, pivot);
+    // ponytail: the slab stays when the door is closed (a 12 cm strip along the side wall), dynamic leaf colliders if it ever matters
+    const dx = Math.cos(d.openYaw), dz = -Math.sin(d.openYaw);
+    const a = [d.hinge[0] + dx * 0.12, d.hinge[2] + dz * 0.12], b = [d.hinge[0] + dx * d.width, d.hinge[2] + dz * d.width];
+    addBox([Math.min(a[0], b[0]) - 0.06, 0, Math.min(a[1], b[1]) - 0.06], [Math.max(a[0], b[0]) + 0.06, d.height, Math.max(a[1], b[1]) + 0.06], 'doorLeaf');
   }
 
   // ---------------------------------------------------------------- lamps + warm house lights (no shadows)
@@ -581,35 +596,35 @@ export function buildHouse(): LevelData {
     group.add(p);
     houseLights.push(p);
   };
-  light(-8.4, 1.45, 2.0, 2.2, 5);    // living floor lamp
+  light(-8.4, 1.45, 2.3, 2.2, 5);    // living floor lamp
   light(8.4, 1.45, -2.05, 2.0, 4.5); // office floor lamp
-  light(3.4, 2.3, 3.8, 2.5, 5.5);    // over the dining table
+  light(3.4, 2.3, 4.4, 2.5, 5.5);    // over the dining table
   light(-7.2, 2.2, -2.6, 1.6, 4.5);  // bedroom
 
   // ---------------------------------------------------------------- props (pos = resting contact point)
   const props: PropSpawn[] = [];
   const P = (kind: PropKind, x: number, y: number, z: number, rotY = 0) => props.push({ kind, pos: [x, y, z], rotY });
   // living: coffee table, side tables, tv stand, bookshelf (book dominoes on the 0.76 shelf), floor toys
-  P('remote', -6.75, 0.45, 3.15, 0.4); P('mug', -6.95, 0.45, 2.7); P('candle', -6.7, 0.45, 2.55); P('phone', -6.62, 0.45, 3.45, -0.3);
-  P('book', -7.02, 0.45, 3.35, 1.2); P('glass', -6.98, 0.45, 2.95);
-  P('lamp', -5.25, 0.6, 4.25); P('frame', -5.3, 0.6, 1.66, -PI / 2); P('vase', -5.15, 0.6, 1.88);
-  P('plantPot', -8.68, 0.55, 3.5);
-  for (let i = 0; i < 6; i++) P('book', -3.95, 0.76, 5.3 + i * 0.08); // dominoes
-  P('vase', -3.95, 1.25, 5.25); P('frame', -3.97, 1.25, 5.72, PI / 2); P('yarn', -3.9, 0.27, 5.2); P('toyMouse', -3.9, 0.27, 5.75, 2);
-  P('plantPot', -3.95, 1.74, 5.25); P('candle', -3.95, 1.74, 5.75);
-  P('yarn', -4.2, 0, 2.2); P('toyMouse', -3.5, 0, 3.9, 2.2); P('pillow', -5.45, 0.33, 2.45, -PI / 2 + 0.2);
-  // kitchen: 3 mugs at the counter edge (cat 0 spawns behind them), salmon on the board, dining table, fridge top
-  P('mug', 4.6, 0.92, 5.4, 0.3); P('mug', 4.85, 0.92, 5.38, -0.2); P('mug', 5.1, 0.92, 5.41, 0.5);
-  P('salmon', 2.3, 0.958, 5.6, PI / 2); P('glass', 2.85, 0.92, 5.72); P('wineBottle', 1.95, 0.92, 5.75);
-  P('cerealBox', 6.95, 0.92, 5.78, PI); P('plate', 7.15, 0.92, 5.48);
-  P('bowl', 8.55, 0.92, 4.45); P('glass', 8.5, 0.92, 3.8); P('wineBottle', 8.62, 0.92, 5.62);
-  P('plate', 3.05, 0.75, 3.5); P('plate', 3.75, 0.75, 3.5); P('glass', 3.0, 0.75, 3.98); P('cucumber', 3.8, 0.75, 3.98, 0.7);
-  P('cerealBox', 8.6, 1.85, 3.0, -PI / 2); P('plantPot', 8.6, 1.85, 3.5);
+  P('remote', -6.75, 0.45, 3.45, 0.4); P('mug', -6.95, 0.45, 3.0); P('candle', -6.7, 0.45, 2.85); P('phone', -6.62, 0.45, 3.75, -0.3);
+  P('book', -7.02, 0.45, 3.65, 1.2); P('glass', -6.98, 0.45, 3.25);
+  P('lamp', -5.25, 0.6, 4.55); P('frame', -5.3, 0.6, 1.96, -PI / 2); P('vase', -5.15, 0.6, 2.18);
+  P('plantPot', -8.68, 0.55, 3.8);
+  for (let i = 0; i < 6; i++) P('book', -3.95, 0.76, 5.9 + i * 0.08); // dominoes
+  P('vase', -3.95, 1.25, 5.85); P('frame', -3.97, 1.25, 6.32, PI / 2); P('yarn', -3.9, 0.27, 5.8); P('toyMouse', -3.9, 0.27, 6.35, 2);
+  P('plantPot', -3.95, 1.74, 5.85); P('candle', -3.95, 1.74, 6.35);
+  P('yarn', -4.2, 0, 2.5); P('toyMouse', -3.5, 0, 4.2, 2.2); P('pillow', -5.55, 0.33, 2.75, -PI / 2 + 0.2);
+  // kitchen: 3 mugs at the counter edge (cat 0 spawns at the end of the row), salmon on the board, dining table, fridge top
+  P('mug', 4.6, 0.92, 6.0, 0.3); P('mug', 4.85, 0.92, 5.98, -0.2); P('mug', 5.1, 0.92, 6.01, 0.5);
+  P('salmon', 2.3, 0.958, 6.2, PI / 2); P('glass', 2.85, 0.92, 6.32); P('wineBottle', 1.95, 0.92, 6.35);
+  P('cerealBox', 6.95, 0.92, 6.38, PI); P('plate', 7.15, 0.92, 6.08);
+  P('bowl', 8.55, 0.92, 5.05); P('glass', 8.5, 0.92, 4.4); P('wineBottle', 8.62, 0.92, 6.22);
+  P('plate', 3.05, 0.75, 4.1); P('plate', 3.75, 0.75, 4.1); P('glass', 3.0, 0.75, 4.58); P('cucumber', 3.8, 0.75, 4.58, 0.7);
+  P('cerealBox', 8.6, 1.85, 3.6, -PI / 2); P('plantPot', 8.6, 1.85, 4.1);
   // hallway: the sitter's shoes by the door
-  P('book', 7.92, 0.47, 2.2, PI); P('shoe', 8.15, 0, 0.35, 0.2); P('shoe', 8.38, 0, 0.32, -0.15);
+  P('book', 7.92, 0.47, HZ - 0.2, PI); P('shoe', 8.15, 0, 0.35, 0.2); P('shoe', 8.38, 0, 0.32, -0.15);
   // bathroom
   P('tpRoll', 1.45, 0.8, -5.75); P('candle', -2.68, 0.6, -5.5); P('candle', -2.72, 0.6, -5.1);
-  P('candle', 1.0, 1.52, -5.78); P('plantPot', 1.4, 1.52, -5.78); P('tpRoll', 1.75, 1.52, -5.78); P('glass', -2.45, 0.85, -1.9);
+  P('candle', 0.2, 1.52, -5.78); P('plantPot', 0.55, 1.52, -5.78); P('tpRoll', 0.95, 1.52, -5.78); P('glass', -2.45, 0.85, -1.9);
   // bedroom
   P('glass', -8.62, 0.55, -4.65); P('lamp', -8.65, 0.55, -2.0); P('book', -8.6, 0.55, -1.8, 0.4);
   P('plantPot', -5.3, 1.95, -5.62); P('sock', -6.4, 0, -1.2, 0.8); P('sock', -4.6, 0, -4.9, -0.4);
@@ -624,26 +639,26 @@ export function buildHouse(): LevelData {
   // ---------------------------------------------------------------- spots
   const S = (id: SpotId, pos: Vec3, facing: number, radius: number): Spot => ({ id, pos, facing, radius, room: roomAt(pos[0], pos[2]) ?? 'hallway' });
   const spots: Spot[] = [
-    S('tv', [-7.85, 0, 2.8], toW, 1.2),
-    S('sofa', [-4.3, 0, 3.0], toW, 1.0),
-    S('fishTank', [-8.66, 0.55, 4.72], toN, 0.6),
-    S('curtains', [-7.05, 0, 5.45], toN, 0.8),
-    S('window', [-6.1, 0, 5.45], toN, 0.7),
-    S('plant', [-1.0, 0, 4.62], 0.4, 0.9),
+    S('tv', [-7.85, 0, 3.1], toW, 1.2),
+    S('sofa', [-4.3, 0, 3.3], toW, 1.0),
+    S('fishTank', [-8.66, 0.55, 5.32], toN, 0.6),
+    S('curtains', [-7.05, 0, 6.05], toN, 0.8),
+    S('window', [-6.1, 0, 6.05], toN, 0.7),
+    S('plant', [-1.0, 0, 5.22], 0.4, 0.9),
     S('scratchPost', [-1.45, 0, 0.5], toE, 0.8),
-    S('salmon', [2.3, 0.92, 5.6], toW, 0.65),
-    S('sink', [3.675, 0, 4.95], toN, 1.0),
-    S('foodBowl', [1.15, 0, 5.1], toN, 0.8),
-    S('carrier', [1.4, 0, 3.4], toS, 1.0),
-    S('frontDoor', [8.3, 0, 1.2], toE, 1.0),
+    S('salmon', [2.3, 0.92, 6.2], toW, 0.65),
+    S('sink', [3.675, 0, 5.55], toN, 1.0),
+    S('foodBowl', [1.15, 0, 5.7], toN, 0.8),
+    S('carrier', [1.4, 0, 3.9], toS, 1.0),
+    S('frontDoor', [8.3, 0, 1.5], toE, 1.0),
     S('shoes', [8.25, 0, 0.78], toS, 0.8),
-    S('fuseBox', [7.8, 0, 1.7], toN, 0.9),
+    S('fuseBox', [7.8, 0, HZ - 0.7], toN, 0.9),
     S('tubFaucet', [-2.3, 0, -4.36], toS, 0.9),
     S('tpRoll', [1.35, 0, -4.6], toE, 0.8),
     S('litterBox', [-0.7, 0, -1.0], toN, 0.9),
-    S('pillow', [-7.72, 0.76, -2.55], -2.2, 0.65),
+    S('pillow', [-7.5, 0.76, -2.95], toW, 0.65), // on the mattress beside the pillow (the old spot slid cats off the edge)
     S('hideout', [-7.75, 0, -3.4], toE, 0.9),
-    S('laundry', [-4.05, 0, -1.55], toE, 0.8),
+    S('laundry', [-3.95, 0, -3.1], toE, 0.8),
     S('laptop', [5.05, 0.75, -5.38], toS, 0.6),
     S('bathroomDoor', [1.3, 0, 0], toS, 1.3),
     S('bedroomDoor', [-3.72, 0, 0], toS, 1.3),
@@ -654,14 +669,15 @@ export function buildHouse(): LevelData {
 
   // ---------------------------------------------------------------- spawns, sun
   const spawns = {
-    sitter: [4.2, 0, 1.2] as Vec3,
-    cats: [[4.85, 0.92, 5.72], [-5.55, 0.33, 3.25], [0.9, 0, -4.3], [5.75, 0.75, -5.45]] as Vec3[],
+    sitter: [1.6, 0, 1.5] as Vec3, // west end of the hallway: the counter cat (player 1 in solo) is ~8 m of walking away
+    // cat 0 stands at the end of the mug row, looking along it: with its back to the wall the camera had no room
+    cats: [[4.3, 0.92, 5.97], [-5.55, 0.33, 3.55], [0.9, 0, -4.3], [5.75, 0.75, -5.45]] as Vec3[],
     sitterYaw: toW,
-    catYaws: [toS, toW, toE, toS],
+    catYaws: [toE, toW, toE, toS],
   };
   const sunPatches = [
-    { center: [-5.6, 0, 5.25] as Vec3, radius: 0.8 },  // living window floor
-    { center: [3.95, 0.92, 5.55] as Vec3, radius: 0.5 }, // kitchen counter by the sink
+    { center: [-5.6, 0, 5.85] as Vec3, radius: 0.8 },  // living window floor
+    { center: [3.95, 0.92, 6.15] as Vec3, radius: 0.5 }, // kitchen counter by the sink
     { center: [-8.2, 0.8, -2.6] as Vec3, radius: 0.5 },  // bedroom: the owner's side of the bed
   ];
 
@@ -734,6 +750,29 @@ function drawOpen(root: THREE.Object3D, k: number) {
  * Raise a model on taller legs: vertices below `cut` (feet, in model meters) stretch to cut + add, everything
  * above moves up by `add`. Geometry is cloned so other instances keep the original.
  */
+/** squash every vertex above height y0 toward it by k (model-local, before placement) */
+function squashAbove(root: THREE.Object3D, y0: number, k: number) {
+  root.updateMatrixWorld(true);
+  const v = new THREE.Vector3();
+  root.traverse((n) => {
+    const mesh = n as THREE.Mesh;
+    if (!mesh.isMesh) return;
+    mesh.geometry = mesh.geometry.clone();
+    const pos = mesh.geometry.attributes.position as THREE.BufferAttribute;
+    const M = mesh.matrixWorld, inv = M.clone().invert();
+    for (let i = 0; i < pos.count; i++) {
+      v.fromBufferAttribute(pos, i).applyMatrix4(M);
+      if (v.y <= y0) continue;
+      v.y = y0 + (v.y - y0) * k;
+      v.applyMatrix4(inv);
+      pos.setXYZ(i, v.x, v.y, v.z);
+    }
+    pos.needsUpdate = true;
+    mesh.geometry.computeBoundingBox();
+    mesh.geometry.computeBoundingSphere();
+  });
+}
+
 function stretchLegs(root: THREE.Object3D, cut: number, add: number) {
   root.updateMatrixWorld(true);
   const v = new THREE.Vector3();

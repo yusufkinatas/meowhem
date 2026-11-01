@@ -63,7 +63,7 @@ class SitterBrain implements BotBrain {
 
   think(v: BotWorldView, dt: number): BotIntent {
     const me = v.self, out: BotIntent = {};
-    if (me.frozen || me.forced) return out;
+    if (me.frozen || me.forced || v.time < 1) return out; // a beat to look around at the start
     if (v.time - Number(v.world['scratchPost.t'] ?? -99) < 1) return out; // even the sitter stops and looks
     this.missT -= dt;
     this.sprayT -= dt;
@@ -86,13 +86,16 @@ class SitterBrain implements BotBrain {
     const cats = v.chars.filter((c) => c.role === 'cat');
     const myRoom = v.roomAt(me.p);
     for (const c of cats) {
+      if (c.st.caged) { this.lastAt.delete(c.id); continue; } // in the carrier: nothing to check on over there
       // a person only knows about cats they can see or hear, plus the alerts on the HUD
       const alerting = (c.work && DISASTERS.has(interKey(c.work.key))) || c.item === 'salmon';
       if (alerting || v.roomAt(c.p) === myRoom || distXZ(c.p, me.p) < 5) { this.seen.set(c.id, v.time); this.lastAt.set(c.id, [...c.p]); }
       if (v.time - (this.seen.get(c.id) ?? -99) > 4) continue;
       if (!this.grabbable(v, c) || (this.ignore.get(c.id) ?? 0) > v.time) continue;
       const k = c.work ? interKey(c.work.key) : '';
-      let u = c.work && DISASTERS.has(k) ? 9 + 8 * c.work.progress : c.work ? 3.5 : 1.2;
+      // a person goes after the cat doing damage; an idle cat only when it's right there
+      if (!c.work && !c.item && distXZ(c.p, me.p) > 6) continue;
+      let u = c.work && DISASTERS.has(k) ? 9 + 8 * c.work.progress : c.work ? 3.5 : 0.8;
       if (c.item === 'salmon') u = 10;
       if (c.loaf && v.mess.some((m) => distXZ(m.p, c.p) < 0.6)) u = Math.max(u, 3.5); // sitting on the mess
       if (c.st.eating) u += 4; // treat freeze: free grab
@@ -171,8 +174,9 @@ class SitterBrain implements BotBrain {
     // go check where a cat was last noticed, else walk to another room and look around
     const nodes = standNodes(v.nav, 'sitter');
     let at: Vec3 | undefined;
-    const recent = [...this.lastAt.entries()].filter(([id, p]) => v.time - (this.seen.get(id) ?? -99) < 15 && distXZ(p, v.self.p) > 2);
-    if (recent.length && v.rng() < 0.7) {
+    // check where a cat was last heard of, not stalk one that's in plain view
+    const recent = [...this.lastAt.entries()].filter(([id, p]) => { const ago = v.time - (this.seen.get(id) ?? -99); return ago > 2 && ago < 15 && distXZ(p, v.self.p) > 2; });
+    if (recent.length && v.rng() < 0.45) {
       const p = recent[Math.floor(v.rng() * recent.length)][1];
       at = nodes.reduce((b, n) => (distXZ(n, p) < distXZ(b, p) ? n : b), nodes[0] ?? p);
     } else {
@@ -234,7 +238,7 @@ class SitterBrain implements BotBrain {
         const d = distXZ(me.p, c.p);
         // give up on a chase that goes nowhere
         if (d < this.chaseBest - 0.3) { this.chaseBest = d; this.chaseT = 0; }
-        else if ((this.chaseT += dt) > 4) { this.ignore.set(c.id, v.time + 6); return this.done(out); }
+        else if ((this.chaseT += dt) > (c.work ? 4 : 2.5)) { this.ignore.set(c.id, v.time + 6); return this.done(out); }
         if (d < CFG.grab.range - 0.25 && Math.abs(c.p[1] - me.p[1]) < 1.35) {
           // in reach but the grab keeps not happening (wedged, refused): try someone else
           if ((this.inRangeT += dt) > 2.5) { this.inRangeT = 0; this.ignore.set(c.id, v.time + 4); return this.done(out); }

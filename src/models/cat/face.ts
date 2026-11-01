@@ -86,14 +86,16 @@ function drawMouth(name: MouthName, ink: CanvasRenderingContext2D, inside: Canva
     case 'omega': omega(ink); break;
     case 'blep': {
       omega(ink);
-      fill(pink, () => { pink.ellipse(0, -3, 12, 15, 0, 0, Math.PI * 2); });
-      stroke(ink, () => { ink.ellipse(0, -3, 12, 15, 0, 0.1, Math.PI - 0.1); }, 4);
+      // big enough to read from the game camera
+      fill(pink, () => { pink.ellipse(0, 1, 15, 20, 0, 0, Math.PI * 2); });
+      stroke(ink, () => { ink.ellipse(0, 1, 15, 20, 0, 0.1, Math.PI - 0.1); }, 4.5);
+      stroke(ink, () => { ink.moveTo(0, -8); ink.lineTo(0, 9); }, 3);
       break;
     }
     case 'derp': {
       omega(ink);
-      fill(pink, () => { pink.ellipse(14, 2, 12, 19, -0.4, 0, Math.PI * 2); });
-      stroke(ink, () => { ink.ellipse(14, 2, 12, 19, -0.4, 0.1, Math.PI - 0.1); }, 4);
+      fill(pink, () => { pink.ellipse(15, 5, 14, 22, -0.4, 0, Math.PI * 2); });
+      stroke(ink, () => { ink.ellipse(15, 5, 14, 22, -0.4, 0.1, Math.PI - 0.1); }, 4.5);
       break;
     }
     case 'lick': {
@@ -172,6 +174,8 @@ export interface FaceUniforms {
   /** mouth index, blush, whisker alpha, mouth scale */
   uMouth: { value: THREE.Vector4 };
   uMouthTex: { value: THREE.Texture };
+  /** x stretch of the decal (chonk widens the cube): the drawing is squeezed back by this */
+  uAspect: { value: number };
 }
 
 export function createFaceMaterial(): { mat: THREE.MeshToonMaterial; u: FaceUniforms } {
@@ -185,6 +189,7 @@ export function createFaceMaterial(): { mat: THREE.MeshToonMaterial; u: FaceUnif
     uBrow: { value: [new THREE.Vector4(), new THREE.Vector4()] },
     uMouth: { value: new THREE.Vector4(0, 0.2, 0.6, 1.25) },
     uMouthTex: { value: mouthAtlas() },
+    uAspect: { value: 1 },
   };
   const mat = new THREE.MeshToonMaterial({ color: 0xffffff, gradientMap: gradientMap(), transparent: true, depthWrite: false });
   mat.polygonOffset = true;
@@ -203,14 +208,14 @@ export function createFaceMaterial(): { mat: THREE.MeshToonMaterial; u: FaceUnif
         totalEmissiveRadiance += faceGlow;
       `);
   };
-  mat.customProgramCacheKey = () => 'meowhem-cat-face-v1';
+  mat.customProgramCacheKey = () => 'meowhem-cat-face-v2';
   return { mat, u };
 }
 
 const FACE_GLSL = /* glsl */ `
 uniform vec3 uIris; uniform vec3 uInk; uniform vec3 uWhisk;
 uniform vec4 uEyeA[2]; uniform vec4 uEyeB[2]; uniform vec4 uEyeC; uniform vec4 uBrow[2]; uniform vec4 uMouth;
-uniform sampler2D uMouthTex;
+uniform sampler2D uMouthTex; uniform float uAspect;
 float sdSeg(vec2 p, vec2 a, vec2 b) { vec2 pa = p - a, ba = b - a; float h = clamp(dot(pa, ba) / dot(ba, ba), 0.0, 1.0); return length(pa - ba * h); }
 float fill(float d, float aa) { return 1.0 - smoothstep(-aa, aa, d); }
 vec3 lin(vec3 c) { return pow(c, vec3(2.2)); }
@@ -290,6 +295,7 @@ vec4 catEye(vec2 f, float side, vec4 A, vec4 B, inout vec3 glow) {
 vec4 catFace(vec2 uv, out vec3 glow) {
   glow = vec3(0.0);
   vec2 f = uv * 2.0 - 1.0;
+  f.x *= uAspect;
   vec4 outc = vec4(0.0);
   float aa = fwidth(f.x) * 1.5;
   // blush

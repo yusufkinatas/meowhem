@@ -404,7 +404,7 @@ export class ClientGame {
     this.camera.update(dt, myView.pos, role, this.sw.world);
     myView.root.visible = !this.camera.tooClose || !!this.show;
     const R = this.o.renderer;
-    R.setLook(dt, !dark, role, !!me.st.catnip);
+    R.setLook(dt, !dark || !!this.show, role, !!me.st.catnip); // the owners switch the lights on for the end show
     if (role === 'sitter' && R.flashlight.visible) {
       // phone in the right hand, pointing where the crosshair is
       const y = this.camera.yaw;

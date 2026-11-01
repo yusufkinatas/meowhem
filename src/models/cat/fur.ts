@@ -30,7 +30,11 @@ export interface CatGeo {
   ears: THREE.BufferGeometry[];   // L, R (pivot at EAR_PIVOT)
   legs: THREE.BufferGeometry[];   // FL FR BL BR (pivot at hip)
   tail: THREE.BufferGeometry;     // skinned, 4 bones
+  /** face decal: the cube's front-facing triangles, nudged out, uv = planar projection of head-space x,y over ±FACE_HALF */
+  face: THREE.BufferGeometry;
 }
+/** the face decal's uv square covers head-space x,y in ±FACE_HALF (model units) */
+export const FACE_HALF = 0.6;
 
 // ---------------------------------------------------------------- atlas layout
 const COLS = 5, ROWS = 4;
@@ -133,8 +137,36 @@ export function catGeometry(): CatGeo {
   });
   skinTail(tail);
   for (const g of [cube, ...ears, ...legs, tail]) addOutlineNormals(g);
-  geo = { cube, ears, legs, tail };
+  geo = { cube, ears, legs, tail, face: faceDecal(cube) };
   return geo;
+}
+
+/**
+ * The decal follows the puffy cube's front (flat centre + the four sloped bevels), so eyes and whiskers sit
+ * on the surface from any angle and end where the head ends (a flat plane floated up to 3 cm off the bevels).
+ */
+function faceDecal(cube: THREE.BufferGeometry): THREE.BufferGeometry {
+  const P = cube.attributes.position as THREE.BufferAttribute;
+  const N = cube.attributes.normal as THREE.BufferAttribute;
+  const pos: number[] = [], nrm: number[] = [], uv: number[] = [];
+  for (let t = 0; t < P.count / 3; t++) {
+    _a.fromBufferAttribute(P, t * 3); _b.fromBufferAttribute(P, t * 3 + 1); _c.fromBufferAttribute(P, t * 3 + 2);
+    const nz = _b.clone().sub(_a).cross(_c.clone().sub(_a)).normalize().z;
+    if (nz < 0.7) continue;
+    for (let k = 0; k < 3; k++) {
+      _p.fromBufferAttribute(P, t * 3 + k);
+      const y = _p.y - H;
+      pos.push(_p.x, y, _p.z + 0.006);
+      nrm.push(N.getX(t * 3 + k), N.getY(t * 3 + k), N.getZ(t * 3 + k));
+      uv.push((_p.x + FACE_HALF) / (2 * FACE_HALF), (y + FACE_HALF) / (2 * FACE_HALF));
+    }
+  }
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  g.setAttribute('normal', new THREE.Float32BufferAttribute(nrm, 3));
+  g.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));
+  g.computeBoundingSphere();
+  return g;
 }
 
 type UvFn = (p: THREE.Vector3, n: THREE.Vector3, uv: number[], i: number, srcUv: [number, number]) => void;
@@ -268,8 +300,10 @@ function patternAt(l: CatLook, seed: number, region: Region, x: number, y: numbe
   if (region === 'cube') {
     const front = z > H - 0.01, top = y > 2 * H - 0.01, bottom = y < 0.01;
     if (pat === 'tabby') {
-      const band = (z + H) * 2.4 + Math.sin(x * 5 + seed) * 0.12;
-      const stripeW = top ? 0.34 : 0.34 * sstep(0.1, 1.0, y);
+      // bands run front to back over the top and sides; the back face (constant z) gets horizontal rings instead
+      const back = z < -H + 0.01;
+      const band = back ? y * 2.6 + Math.sin(x * 6 + seed) * 0.1 : (z + H) * 2.4 + Math.sin(x * 5 + seed) * 0.12;
+      const stripeW = top ? 0.34 : back ? 0.3 * sstep(0.2, 0.5, y) : 0.34 * sstep(0.1, 1.0, y);
       const bd = Math.abs(band - Math.round(band)) - stripeW * 0.5;
       if (!front && !bottom && z < H - 0.08) out.lerp(sec, 0.85 * sstep(0.025, -0.025, bd));
       if (front) {

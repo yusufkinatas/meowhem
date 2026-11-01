@@ -53,7 +53,7 @@ function resize() {
   css.setSize(w, h);
   persp.aspect = w / h;
   persp.updateProjectionMatrix();
-  const a = w / h, half = 6.6;
+  const a = w / h, half = 6.9;
   Object.assign(ortho, { left: -half * a, right: half * a, top: half, bottom: -half });
   ortho.updateProjectionMatrix();
 }
@@ -89,9 +89,9 @@ function setCam(p: Vec3, at: Vec3) {
   pitch = Math.asin(d.y);
 }
 setCam(vec('cam', [0, 9, 13]), vec('at', [0, 0, 0]));
-ortho.position.set(0, 50, 0);
+ortho.position.set(0, 50, 0.3);
 ortho.up.set(0, 0, -1);
-ortho.lookAt(0, 0, 0);
+ortho.lookAt(0, 0, 0.3);
 
 // ---------------------------------------------------------------- overlays
 function overlays(level: LevelData) {

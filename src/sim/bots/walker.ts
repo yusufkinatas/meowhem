@@ -2,7 +2,7 @@
 import type { DoorDef, Vec3 } from '../../shared/contracts';
 import { distXZ } from '../../core/math';
 import type { BotIntent, BotWorldView } from './types';
-import { planPath, type PathPt } from './nav';
+import { clearXZ, planPath, type PathPt } from './nav';
 
 export type WalkState = 'moving' | 'arrived' | 'failed' | 'door';
 
@@ -22,13 +22,19 @@ export class Walker {
   private jumpT = 0;
   private pounceT = 0;
   private pounceYaw = 0;
+  /** watchdog: best remaining distance to the target and when it last improved (catches back-and-forth wedging) */
+  private far = Infinity;
+  private farT = 0;
 
-  go(v: BotWorldView, target: Vec3, budget?: number): boolean {
+  /** path: precomputed waypoints (e.g. the flee search's safe route); replans normally if it gets stuck */
+  go(v: BotWorldView, target: Vec3, budget?: number, path?: PathPt[]): boolean {
     this.target = [...target];
     this.age = 0;
     this.repaths = 0;
+    this.far = Infinity;
+    this.farT = 0;
     this.door = null;
-    const ok = this.plan(v);
+    const ok = path?.length ? this.use(v, path) : this.plan(v);
     const len = this.path.reduce((a, p, k) => a + (k ? distXZ(p.p, this.path[k - 1].p) : distXZ(v.self.p, p.p)), 0);
     this.budget = budget ?? 6 + len / 1.6;
     return ok;
@@ -40,8 +46,13 @@ export class Walker {
     const t = this.target!;
     // plan from where the feet will land (a mid-jump height would pick a surface node behind a wall)
     const from: Vec3 = v.self.g ? v.self.p : [v.self.p[0], Math.max(0, v.self.p[1] - 0.6), v.self.p[2]];
-    const p = planPath(v.nav, from, t, { role: v.self.role, doorOpen: (id) => v.doorOpen(id), roomAt: (q) => v.roomAt(q) });
-    this.path = p ?? [{ p: t, jump: t[1] > v.self.p[1] + 0.25 }];
+    const sitter = v.self.role === 'cat' ? v.chars.find((c) => c.role === 'sitter' && !c.holding) : undefined;
+    const p = planPath(v.nav, from, t, { role: v.self.role, doorOpen: (id) => v.doorOpen(id), roomAt: (q) => v.roomAt(q), colliders: v.level.colliders, danger: sitter?.p });
+    return this.use(v, p ?? [{ p: t, jump: t[1] > v.self.p[1] + 0.25 }]) && !!p;
+  }
+
+  private use(v: BotWorldView, path: PathPt[]): boolean {
+    this.path = path;
     // skip waypoints behind us: start from the closest one
     let bi = 0, bd = Infinity;
     for (let k = 0; k < Math.min(3, this.path.length); k++) {
@@ -51,7 +62,7 @@ export class Walker {
     this.i = bi;
     this.best = Infinity;
     this.stuck = 0;
-    return !!p;
+    return true;
   }
 
   /** drive one tick toward the target. arrive = horizontal arrival radius at the last point */
@@ -60,6 +71,9 @@ export class Walker {
     if (!this.target) return 'arrived';
     this.age += dt;
     if (this.age > this.budget) { this.stop(); return 'failed'; }
+    const togo = distXZ(me.p, this.target) + Math.abs(me.p[1] - this.target[1]);
+    if (togo < this.far - 0.3) { this.far = togo; this.farT = this.age; }
+    else if (this.age - this.farT > 4) { this.stop(); return 'failed'; }
     const last = this.path.length - 1;
     // advance past reached waypoints
     while (this.i < last) {
@@ -68,7 +82,8 @@ export class Walker {
       const next = this.path[this.i + 1];
       const reached = distXZ(me.p, wp.p) < 0.4 && dy < 0.45;
       // cut corners on the same level when the next point is already closer
-      const skip = !next.jump && !next.door && dy < 0.3 && Math.abs(next.p[1] - me.p[1]) < 0.3 && distXZ(me.p, wp.p) < 0.9 && distXZ(me.p, next.p) < distXZ(wp.p, next.p);
+      const skip = !next.jump && !next.door && dy < 0.3 && Math.abs(next.p[1] - me.p[1]) < 0.3 && distXZ(me.p, wp.p) < 0.9 && distXZ(me.p, next.p) < distXZ(wp.p, next.p)
+        && clearXZ(v.level.colliders, me.p, next.p, me.role === 'cat' ? 0.15 : 0.26, me.p[1], me.role === 'cat' ? 0.4 : 1.6);
       if (!reached && !skip) break;
       this.i++;
       this.best = Infinity;
@@ -102,13 +117,15 @@ export class Walker {
     out.moveTo = wp.p;
     // jump up onto things: close enough that the arc lands on top
     this.jumpT -= dt;
-    if (dy > 0.25 && me.g && this.jumpT <= 0 && d < (dy > 0.6 ? 0.8 : 1.0)) this.jump(out);
+    if ((dy > 0.25 || (wp.jump && dy > -0.1)) && me.g && this.jumpT <= 0 && d < (dy > 0.6 ? 0.8 : 1.0)) this.jump(out);
 
     // stuck detection: no progress toward the current waypoint
     const prog = d + Math.abs(dy);
     if (prog < this.best - 0.08) { this.best = prog; this.stuck = 0; }
     else this.stuck += dt;
-    if (this.stuck > 0.9 && me.g && this.jumpT <= 0 && me.role === 'cat') this.jump(out);
+    // a jump-up blocked from right here (chair, table leg): jump from where we are instead of pushing
+    const jumpWp = wp.jump || dy > 0.25;
+    if (this.stuck > (jumpWp && d < 1.5 ? 0.3 : 0.9) && me.g && this.jumpT <= 0 && me.role === 'cat') this.jump(out);
     if (this.stuck > 1.8 && me.g) { // plan from the ground, never mid-jump
       if (++this.repaths > 4) { this.stop(); return 'failed'; }
       if (this.repaths >= 3 && me.role === 'cat') { this.pounceT = 0.9; this.pounceYaw = v.rng() * Math.PI * 2; this.stuck = 0; return 'moving'; }

@@ -172,7 +172,7 @@ export interface LevelData {
   doors: DoorDef[];
   rooms: RoomDef[];
   nav: { nodes: NavNode[]; links: NavLink[] };
-  spawns: { sitter: Vec3; cats: Vec3[] };
+  spawns: { sitter: Vec3; cats: Vec3[]; sitterYaw?: number; catYaws?: number[] };
   sunPatches: { center: Vec3; radius: number }[];
   /** door meshes are owned by the level; the sim calls this when doors change */
   setDoorOpen(id: DoorDef['id'], open01: number): void;

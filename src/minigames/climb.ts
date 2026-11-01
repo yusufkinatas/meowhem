@@ -49,8 +49,8 @@ export function climb(host: MinigameHost): Game {
     const same = s === last;
     last = s;
     if (f.locked()) return;
-    if (extreme()) { if (!space) slip(); return; }
-    if (same) { slip(); return; }
+    // a slip: the same paw twice, or A/D in an extreme without Space (holding Space you keep climbing)
+    if (same || (extreme() && !space)) { slip(); return; }
     if (!cap()) return;
     const i = s < 0 ? 0 : 1;
     f.report(STEP);
@@ -109,8 +109,8 @@ export function climb(host: MinigameHost): Game {
       const ext = Math.abs(swayAt(t + 0.08)) > EXTREME || extreme();
       if (ext !== space) this.key(fake('Space', ext), ext);
       botT -= dt;
-      if (botT > 0 || ext || f.locked()) return;
-      botT = rand(0.26, 0.3);
+      if (botT > 0 || f.locked()) return;
+      botT = rand(0.3, 0.38);
       const s = Math.random() < 0.96 ? -last || -1 : last || 1;
       this.key(fake(s < 0 ? 'KeyA' : 'KeyD'), true);
     },

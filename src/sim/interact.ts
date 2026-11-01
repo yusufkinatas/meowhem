@@ -96,6 +96,8 @@ export class Interactions {
     const dy = Math.abs(anchor[1] - p[1]);
     const d = distXZ(p, anchor);
     if (!ignoreRange && (d > range || dy > 1.3)) return;
+    // raised spots (laptop, salmon, fish tank, pillow) are worked from up there, not from the floor below
+    if (!ignoreRange && c.s.role === 'cat' && anchor[1] - p[1] > 0.35) return;
     const chk = use.check ? use.check(this.sim.ctx, s, c.s) : true;
     if (chk === false) return;
     let ok = chk === true;
@@ -258,7 +260,7 @@ export class Interactions {
     this.active.delete(c.s.id);
     c.s.work = null;
     if (!completed && k.use.keepProgress === false) this.progress.set(k.pkey, 0);
-    if (k.use.mode === 'minigame' && !c.s.bot) this.sim.emit({ e: 'mgClose', key: k.key }, c.s.id);
+    if (k.use.mode === 'minigame' && !c.s.bot) this.sim.emit({ e: 'mgClose', key: k.key, done: completed || undefined }, c.s.id);
     this.run(k.def, () => k.use.onStop?.(this.sim.ctx, k.s, c.s, completed));
   }
 
@@ -281,7 +283,8 @@ export class Interactions {
       const w = this.workers.get(k.def.id) ?? new Set<string>();
       this.workers.set(k.def.id, w.add(c.s.id));
     }
-    const p = Math.min(1, (this.progress.get(k.pkey) ?? 0) + d);
+    // float sums of small deltas stop at 0.9999999: count that as done (fish tank lands its last fish at 1 - 1e-6)
+    const raw = (this.progress.get(k.pkey) ?? 0) + d, p = raw >= 1 - 1e-6 ? 1 : raw;
     this.progress.set(k.pkey, p);
     this.run(k.def, () => k.use.onProgress?.(this.sim.ctx, k.s, c.s, p));
     if (p >= 1) this.complete(k, c);

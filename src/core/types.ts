@@ -170,7 +170,7 @@ export type GameEvent =
   | { e: 'toast'; text: string; tone?: 'good' | 'bad' | 'info' }
   | { e: 'popup'; text: string; color?: string }
   | { e: 'mgOpen'; key: string; kind: MinigameKind; data?: Record<string, unknown> }
-  | { e: 'mgClose'; key: string }
+  | { e: 'mgClose'; key: string; done?: boolean; result?: 'win' | 'lose' | 'off' }
   | { e: 'push'; id: PlayerId; v: Vec3 }
   | { e: 'propGone'; id: number }
   | { e: 'tvShow'; show: TvShow }

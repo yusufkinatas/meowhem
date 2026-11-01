@@ -10,7 +10,8 @@ import type { CharState } from '../../core/types';
 import type { PropView } from '../interactables/types';
 import { registerBotBrain, type BotBrain, type BotBrainOpts, type BotIntent, type BotOption, type BotWorldView } from './types';
 import { BOT_DIFF, type BotDiff } from './difficulty';
-import { standNodes } from './nav';
+import { grabbableFrom, navNodes, reachFrom, reachPath, standNodes } from './nav';
+import { CFG, scaleFor } from '../../config';
 import { Walker } from './walker';
 
 type Pers = 'goblin' | 'gremlin' | 'opportunist' | 'sleepy';
@@ -23,9 +24,12 @@ const WEIGHT: Record<Pers, { disaster: number; knock: number; mischief: number; 
 };
 /** how much a cat use is worth to a bot (permanent points, roughly) */
 const VALUE: Record<string, number> = {
-  laptop: 12, tubFaucet: 15, tpRoll: 8, sofa: 5, curtains: 10, fishTank: 9, salmon: 9, fuseBox: 6, frontDoor: 7,
+  laptop: 12, tubFaucet: 15, tpRoll: 8, sofa: 8, curtains: 10, fishTank: 9, salmon: 9, fuseBox: 6, frontDoor: 7,
   pillow: 3, plant: 3, laundry: 2.5, window: 2.5, foodBowl: 2, sink: 1.5, tv: 3, shoes: 0.6,
 };
+/** bot seconds per use at 1x (Use.time), for "can I finish before the sitter gets here" */
+const WORK_T: Record<string, number> = { laptop: 15, tubFaucet: 8, tpRoll: 11, sofa: 6, curtains: 11, fishTank: 14, frontDoor: 5, fuseBox: 1.5, carrier: 3.5, hideout: 5 };
+const interKey = (k: string) => k.split(':')[1] ?? '';
 /** never chosen as goals (scratchPost: they never use it; the rest are handled by dedicated behaviors) */
 const NEVER = new Set(['scratchPost', 'litterBox', 'carrier', 'hideout', 'bathroomDoor', 'bedroomDoor', 'officeDoor']);
 const SHARED = new Set(['laptop', 'tpRoll', 'sofa', 'frontDoor']);
@@ -45,6 +49,8 @@ interface Goal {
   t?: number;          // generic timer (meows, sit time)
   alt?: Vec3;          // zoom: second room, innocent: the perch to return to
   resume?: number;     // innocent: time to climb back
+  guard?: boolean;     // loaf: sitting on the running tap so the sitter can't turn it off (stays put)
+  since?: number;      // knock/push: when we got there (give up if it never works out)
 }
 interface DoorState { id: DoorDef['id']; phase: 'yowl' | 'hang' | 'sit' | 'block'; t: number; meowT: number }
 
@@ -105,8 +111,14 @@ class CatBrain implements BotBrain {
   private hissCd = 0;
   /** the disaster we were chased off (progress is kept, so go back when the coast is clear) */
   private resume: { key: string; until: number } | null = null;
+  /** the sitter just turned the tap off: not worth running straight back */
+  private tapWas = false;
+  private tapCool = 0;
   private swipeT = 0;
   private meowT = 0;
+  /** when the sitter started coming at us (-1 = not), we bolt one reaction time later */
+  private threatAt = -1;
+  private fledAt = -99;
 
   constructor(private o: BotBrainOpts) {
     this.D = BOT_DIFF[o.difficulty];
@@ -129,6 +141,7 @@ class CatBrain implements BotBrain {
     const sp = Number(v.world['scratchPost.t'] ?? -99);
     if (v.time - sp < 1 && v.world['scratchPost.by'] !== me.id) return out;
 
+    this.watchSitter(v, sitter);
     if ((this.decideT -= dt) <= 0) {
       this.decideT = this.D.react * (0.6 + v.rng() * 0.8);
       this.decide(v, sitter);
@@ -172,6 +185,9 @@ class CatBrain implements BotBrain {
 
   // ------------------------------------------------------------------ timeline beats (1:00 zoomies, 0:08 car)
   private timeline(v: BotWorldView) {
+    const tap = v.world['tub.running'] === true;
+    if (this.tapWas && !tap && v.world['done.tubFaucet'] !== true) this.tapCool = v.time + 35 + v.rng() * 20;
+    this.tapWas = tap;
     const t = v.timeLeft, prev = this.prevLeft;
     this.prevLeft = t;
     if (prev > 60 && t <= 60) this.zoomUntil = v.time + 10;
@@ -193,15 +209,13 @@ class CatBrain implements BotBrain {
       const eat = v.options.find((o) => o.interactable === 'hideout' && o.ok);
       if (eat) return this.setUse(v, eat, 20);
     }
-    // counter innocence (before fleeing: off the counter and sitting nicely, unless mid-disaster)
-    if (sitter && g?.k !== 'flee' && this.innocence(v, sitter, !!workingAlert)) {
-      const close = distXZ(sitter.p, me.p) < 3 && this.threat(v, sitter) && this.o.difficulty !== 'kitten';
-      if (!close || this.goal?.k !== 'innocent') return;
-    }
-    // flee the sitter when it comes with intent
-    if (sitter && this.threat(v, sitter) && g?.k !== 'flee' && !(g?.k === 'innocent' && distXZ(sitter.p, me.p) > 3)) {
-      const nearDone = workingAlert && (me.work!.progress > 0.85) && distXZ(sitter.p, me.p) > 2.2;
-      if (!nearDone && !(this.o.difficulty === 'kitten' && g?.k === 'innocent')) return this.flee(v, sitter);
+    // counter innocence: off the counter and sitting nicely (fleeing is watchSitter's job)
+    if (sitter && g?.k !== 'flee' && this.innocence(v, sitter, !!workingAlert)) return;
+    // up where the sitter can't reach while it's around: stay put
+    if (sitter && me.g && me.p[1] - sitter.p[1] > 1.45 && distXZ(sitter.p, me.p) < this.D.flee + 1.5 && !working && (!g || g.k === 'flee' || g.k === 'wander' || (g.at && g.at[1] < me.p[1] - 0.5))) {
+      this.goal = { k: 'loaf', at: [...me.p], until: v.time + 1.5 + v.rng() * 2, arrived: true };
+      this.w.stop();
+      return;
     }
     if (g?.k === 'flee') {
       // still being chased at the end of a run: keep going
@@ -229,7 +243,9 @@ class CatBrain implements BotBrain {
     // the litter box: fresh box rush, or just needing to go
     const box = v.options.find((o) => o.interactable === 'litterBox' && o.label !== 'Go right here' && o.ok);
     const here = v.options.find((o) => o.interactable === 'litterBox' && o.label === 'Go right here' && o.ok);
-    const rush = box && (this.bad.get(box.key) ?? 0) < v.time && (v.world['litter.fresh'] === true ? me.poop >= 0.5 : me.poop >= 0.8);
+    // just ran from the sitter and it's still by the box: wait it out
+    const hot = !!box && !!sitter && v.time - this.fledAt < 6 && distXZ(sitter.p, box.at) < Math.max(3, this.D.flee * 0.7);
+    const rush = box && !hot && (this.bad.get(box.key) ?? 0) < v.time && (v.world['litter.fresh'] === true ? me.poop >= 0.5 : me.poop >= 0.8);
     if (here && (this.pers !== 'gremlin' || g?.k === 'poopSpot' || g?.k === 'loaf')) { if (!(g?.k === 'use' && g.key === here.key)) return this.setUse(v, here, 6); return; }
     if (rush && !(g?.k === 'use' && g.key === box!.key) && !minigame) return this.setUse(v, box!, 18);
     if (me.poop >= 1 && !box && !here && this.pers === 'gremlin' && g?.k !== 'poopSpot') return this.poopSpot(v);
@@ -240,38 +256,93 @@ class CatBrain implements BotBrain {
     this.pick(v, sitter);
   }
 
+  /** coming at me with intent: close, or closing in fast within my flee radius */
   private threat(v: BotWorldView, s: Readonly<CharState>): boolean {
     const me = v.self;
-    if (s.holding || s.st.stunned || s.st.slip) return false;
-    const d = distXZ(s.p, me.p);
+    if (s.holding || s.st.stunned || s.st.slip || s.forced) return false;
     if (Math.abs(s.p[1] - me.p[1]) > 1.45) return false; // out of reach up here
-    if (d < 1.6) return true;
+    const d = distXZ(s.p, me.p);
+    if (d < 1.7) return true;
     if (d > this.D.flee) return false;
-    const toMe = facingDot(s.yaw, s.p, me.p);
-    const vx = s.v[0], vz = s.v[2], sp = Math.hypot(vx, vz);
-    const closing = sp > 1.2 && (vx * (me.p[0] - s.p[0]) + vz * (me.p[2] - s.p[2])) / (sp * (d || 1)) > 0.8;
-    return closing || (toMe > 0.9 && d < this.D.flee * 0.6);
+    // heading at me, not just passing by (a sitter rounding furniture toward me still counts up close)
+    const sp = Math.hypot(s.v[0], s.v[2]);
+    if (sp < 0.8) return facingDot(s.yaw, s.p, me.p) > 0.9 && d < this.D.flee * 0.45;
+    const heading = (s.v[0] * (me.p[0] - s.p[0]) + s.v[2] * (me.p[2] - s.p[2])) / (d * sp);
+    return heading > (d < 3 ? 0.5 : 0.85);
   }
 
-  private flee(v: BotWorldView, s: Readonly<CharState>) {
-    const me = v.self;
-    let best: Vec3 | null = null, bs = -Infinity;
-    const away = [me.p[0] - s.p[0], me.p[2] - s.p[2]], al = Math.hypot(away[0], away[1]) || 1;
-    for (const n of standNodes(v.nav, 'cat')) {
-      const dm = distXZ(n, me.p);
-      if (dm < 2.5 || dm > 8) continue;
-      const dir = ((n[0] - me.p[0]) * away[0] + (n[2] - me.p[2]) * away[1]) / (dm * al);
-      if (dir < -0.2) continue;
-      // out of reach beats far away: high perches the sitter can't grab from the floor
-      const score = distXZ(n, s.p) - dm * 0.35 + dir * 2 + (n[1] - s.p[1] > 1.4 ? 5 : n[1] > 0.5 ? 1 : 0) + v.rng();
-      if (score > bs) { bs = score; best = n; }
+  /** every tick: notice the sitter coming (one reaction time), then run. Mid-disaster and nearly done: finish it. */
+  private watchSitter(v: BotWorldView, s: Readonly<CharState> | undefined) {
+    const me = v.self, g = this.goal;
+    const kittenSits = this.o.difficulty === 'kitten' && g?.k === 'innocent'; // Kitten keeps sitting nicely and gets picked up
+    const guarding = g?.guard && g.arrived && v.world['tub.running'] === true; // sitting on the tap: let it come
+    if (!s || g?.k === 'flee' || kittenSits || guarding || !this.threat(v, s)) { this.threatAt = -1; return; }
+    // mid-disaster: running away hands the sitter a free Undo, so keep at it while it's still a couple of steps off,
+    // and to the end if it finishes before the sitter's hand gets here
+    const w = me.work, d = distXZ(s.p, me.p);
+    if (w && this.optionFor(v, w.key)?.alert && d > 2.3) {
+      const left = (1 - w.progress) * (WORK_T[interKey(w.key)] ?? 8) * this.D.work * scaleFor(v.chars.filter((c) => c.role === 'cat').length).work;
+      if (w.progress > 0.85 || left < Math.max(0, d - CFG.grab.range) / CFG.sitter.sprint + 0.4 || d > 3.2) return;
     }
-    // under the bed works too
+    // already on edge (just ran): no second reaction time
+    if (this.threatAt < 0) this.threatAt = v.time + (v.time - this.fledAt < 2.5 ? 0 : this.D.react * (0.6 + v.rng() * 0.8));
+    if (v.time >= this.threatAt) { this.threatAt = -1; this.flee(v, s); }
+  }
+
+  /**
+   * Run where the sitter can't follow in time: a Dijkstra over the cat graph that only expands nodes the cat reaches
+   * before the sitter can stand within grab range of them (the sitter's own Dijkstra, doors cost it a moment).
+   * Best: perches above its reach, under the bed, another room, far ahead of it. Cornered: the least bad node.
+   */
+  private flee(v: BotWorldView, s: Readonly<CharState>) {
+    const me = v.self, nav = v.nav, { pos } = navNodes(nav), near = grabbableFrom(nav);
+    const opts = { doorOpen: (id: DoorDef['id']) => v.doorOpen(id), roomAt: (q: Vec3) => v.roomAt(q), colliders: v.level.colliders };
+    const sr = reachFrom(nav, s.p, { role: 'sitter', ...opts, maxD: 30 });
     const hide = v.level.spots.find((x) => x.id === 'hideout');
-    if (hide && distXZ(hide.pos, me.p) < 7 && distXZ(hide.pos, s.p) > distXZ(hide.pos, me.p) && v.rng() < 0.7) best = hide.pos;
-    if (!best) return;
-    this.goal = { k: 'flee', until: v.time + 2 + v.rng() * 1.5, at: best, face: (v.rng() - 0.5) * 0.9 };
-    this.w.go(v, best, 6);
+    const SIT = CFG.sitter.sprint, CAT = CFG.cat.sprint * 0.92, GR = CFG.grab.range;
+    // seconds until the sitter can grab a cat standing on node i
+    const sitterT = (i: number) => {
+      if (hide && distXZ(pos[i], hide.pos) < hide.radius && pos[i][1] < 0.3) return Infinity; // under the bed
+      let d = Infinity;
+      for (const j of near[i]) d = Math.min(d, sr ? sr.d[j] : distXZ(pos[j], s.p));
+      return Math.max(0, d - GR) / SIT;
+    };
+    const st = new Float64Array(pos.length).fill(-1);
+    const T = (i: number) => (st[i] < 0 ? (st[i] = sitterT(i)) : st[i]);
+    // lead = how much sooner the cat gets somewhere than the sitter's hand. Keep about the lead we have now.
+    const startNode = reachFrom(nav, me.p, { role: 'cat', ...opts, maxD: 0 })?.start ?? -1;
+    const L0 = startNode >= 0 ? Math.min(T(startNode), 0.4) : 0;
+    const lead = (i: number, d: number) => T(i) - d / CAT;
+    const cr = reachFrom(nav, me.p, { role: 'cat', ...opts, throughDoors: false, maxD: 14, keep: (i, d) => lead(i, d) >= L0 - 0.2 });
+    const sroom = v.roomAt(s.p);
+    let best = -1, bs = -Infinity, least = -1, ls = -Infinity;
+    if (cr) for (let i = 0; i < pos.length; i++) {
+      const d = cr.d[i];
+      if (d === Infinity) continue;
+      const l = Math.min(lead(i, d), 3);
+      if (d > 1.6 && l > ls) { ls = l; least = i; }
+      if ((d < 2 && T(i) !== Infinity) || l < L0 - 0.2) continue;
+      const score = l * 2 + (T(i) === Infinity ? 6 : pos[i][1] > 0.5 ? 0.6 : 0) + (v.roomAt(pos[i]) !== sroom ? 1 : 0) - d * 0.08 + v.rng();
+      if (score > bs) { bs = score; best = i; }
+    }
+    if (best < 0) best = least; // nearly cornered: the least bad place we can reach
+    let at: Vec3 | null = null, path;
+    if (cr && best >= 0) { at = pos[best]; path = reachPath(nav, cr, best); }
+    else {
+      // cornered: anywhere 2 to 6 m off that puts more room between us (past it if need be)
+      const any = reachFrom(nav, me.p, { role: 'cat', ...opts, throughDoors: false, maxD: 6 });
+      let bd = -Infinity;
+      if (any) for (let i = 0; i < pos.length; i++) {
+        const d = any.d[i];
+        if (d < 2 || d === Infinity) continue;
+        const sc = distXZ(pos[i], s.p) + (T(i) === Infinity ? 5 : 0) + v.rng();
+        if (sc > bd) { bd = sc; at = pos[i]; path = reachPath(nav, any, i); }
+      }
+    }
+    if (!at) return;
+    this.fledAt = v.time;
+    this.goal = { k: 'flee', until: v.time + 2 + v.rng() * 1.5, at };
+    this.w.go(v, at, 6, path);
     this.lookAt(v, null);
   }
 
@@ -355,9 +426,11 @@ class CatBrain implements BotBrain {
     };
     const ok = (key: string) => (this.bad.get(key) ?? 0) < t;
     const others = v.chars.filter((c) => c.role === 'cat' && c.id !== me.id);
+    // nothing right under the sitter's hands (while they're free)
+    const tooClose = (p: Vec3) => !!s && !s.holding && !s.st.stunned && distXZ(p, s.p) < 3.5 && Math.abs(p[1] - s.p[1]) < 1.45;
 
     for (const o of v.options) {
-      if (!o.ok || NEVER.has(o.interactable) || !ok(o.key)) continue;
+      if (!o.ok || NEVER.has(o.interactable) || !ok(o.key) || (tooClose(o.at) && o.interactable !== 'litterBox')) continue;
       const base = VALUE[o.interactable] ?? 2;
       if (o.interactable === 'window' && me.st.focused) continue;
       if ((o.interactable === 'foodBowl' || o.interactable === 'sink') && me.st.fed) continue;
@@ -368,13 +441,14 @@ class CatBrain implements BotBrain {
       if (this.resume && this.resume.key === o.key && this.resume.until > t) mul *= 2.5;
       if (busy) mul *= SHARED.has(o.interactable) ? 1.6 : 0.25;
       if (o.interactable === 'fuseBox' && v.world.lights === false) continue;
+      if (o.interactable === 'tubFaucet' && t < this.tapCool) mul *= 0.25;
       const score = (base * mul * sitterF(o.at)) / (1 + travel(o.at) / 7);
       cands.push({ score, set: () => this.setUse(v, o, 10 + 25) });
     }
     // knock things off
     let n = 0;
     for (const pr of v.props) {
-      if (pr.fallen || pr.special || pr.home[1] < 0.3 || pr.p[1] < 0.3 || !ok(`p${pr.id}`)) continue;
+      if (pr.fallen || pr.special || pr.home[1] < 0.3 || pr.p[1] < 0.3 || !ok(`p${pr.id}`) || tooClose(pr.p)) continue;
       const d = travel(pr.p);
       if (d > 14 || n++ > 60) continue;
       const def = PROP_DEFS[pr.kind];
@@ -389,6 +463,12 @@ class CatBrain implements BotBrain {
     if (best && distXZ(best.p, me.p) < 10) cands.push({ score: (W.loaf * (1 + best.w / 3)) / (1 + travel(best.p) / 6), set: () => this.loafGoal(v, best.p, 8 + v.rng() * 8) });
     const pkgOpen = v.world['package.open'] === true && v.props.find((p) => p.kind === 'package');
     if (pkgOpen) cands.push({ score: 2.2 / (1 + travel(pkgOpen.p) / 8), set: () => this.loafGoal(v, pkgOpen.p, 8 + v.rng() * 8) });
+    // the tap is running: someone sits on it (the sitter has to pick them up first)
+    const tub = v.level.spots.find((x) => x.id === 'tubFaucet');
+    if (tub && v.world['tub.running'] === true && !others.some((c) => c.loaf && distXZ(c.p, tub.pos) < 0.7)) {
+      const k = this.pers === 'sleepy' ? 2 : this.pers === 'goblin' ? 1.4 : 0.8;
+      cands.push({ score: (10 * k * W.disaster) / (1 + travel(tub.pos) / 7), set: () => { this.loafGoal(v, tub.pos, 45); this.goal!.guard = true; } });
+    }
     const sun = v.level.sunPatches[0];
     if (sun) cands.push({ score: (W.loaf * 0.9) / (1 + travel(sun.center) / 8), set: () => this.loafGoal(v, sun.center, 6 + v.rng() * 10) });
     const lb = v.level.spots.find((x) => x.id === 'litterBox');
@@ -492,7 +572,7 @@ class CatBrain implements BotBrain {
     const walk = (arrive = 0.35) => {
       if (g.arrived) return true;
       const st = this.w.target ? this.w.step(v, dt, out, arrive) : 'arrived';
-      if (st === 'door') { this.door = { id: this.w.door!, phase: 'yowl', t: v.time + 2 + v.rng() * 6, meowT: 0 }; return false; }
+      if (st === 'door') { this.door = { id: this.w.door!, phase: 'yowl', t: v.time + 1.5 + v.rng() * 3, meowT: 0 }; return false; }
       if (st === 'failed') { this.fail(v); return false; }
       if (st === 'arrived') { g.arrived = true; return true; }
       // sprint when it's far, fleeing or zooming (Sleepy never runs)
@@ -524,6 +604,8 @@ class CatBrain implements BotBrain {
         if (!walk(0.25) && distXZ(me.p, pr.p) > 0.6) return out;
         this.w.stop();
         g.arrived = true;
+        g.since ??= v.time;
+        if (v.time - g.since > 6) { this.bad.set(`p${pr.id}`, v.time + 20); return this.done(v, out); } // out of reach after all
         out.faceYaw = g.face ?? yawTo(me.p, pr.p);
         const d = distXZ(me.p, pr.p);
         if (d > 0.5) out.moveTo = [pr.p[0] - Math.sin(out.faceYaw) * 0.3, pr.p[1], pr.p[2] - Math.cos(out.faceYaw) * 0.3];
@@ -542,6 +624,7 @@ class CatBrain implements BotBrain {
         return out;
       }
       case 'loaf': case 'poopSpot': {
+        if (g.guard && v.world['tub.running'] !== true) return this.done(v, out);
         if (!walk(0.3)) return out;
         out.loaf = true;
         if (v.rng() < 0.004) out.meow = true;
@@ -549,15 +632,8 @@ class CatBrain implements BotBrain {
       }
       case 'flee': {
         if (s && distXZ(s.p, me.p) > this.D.flee + 2.5) return this.done(v, out);
-        // the sitter is right there: bolt straight away first, path later
-        if (s && distXZ(s.p, me.p) < 2.2 && Math.abs(s.p[1] - me.p[1]) < 1.4) {
-          const a = yawTo(s.p, me.p) + (g.face ?? 0);
-          out.moveTo = [me.p[0] + Math.sin(a) * 1.5, me.p[1], me.p[2] + Math.cos(a) * 1.5];
-          out.sprint = me.stamina > 0.02;
-          if (this.w.target) this.w.step(v, dt, {}, 0.5); // keep the path's stuck clock honest
-          return out;
-        }
         if (walk(0.5)) return this.done(v, out);
+        out.sprint = me.stamina > 0.02;
         return out;
       }
       case 'innocent': {

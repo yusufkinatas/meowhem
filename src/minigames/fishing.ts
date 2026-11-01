@@ -46,7 +46,8 @@ export function fishing(host: MinigameHost): Game {
       e, kind, size, dart: 0, stare: 0, gone: false,
       x: fromEdge ? (dir > 0 ? -60 : SW + 60) : rand(120, 700), y: SY,
       vx: dir * (kind === 'blowfish' ? rand(50, 70) : rand(95, 150)),
-      base: kind === 'blowfish' ? SY + rand(-30, 30) : 110 + (i % 3) * 110, amp: kind === 'blowfish' ? 40 : rand(70, 110),
+      // every fish's swim path crosses the paw's line (the shadow), so none is out of reach
+      base: SY + (kind === 'blowfish' ? rand(-30, 30) : ((i % 3) - 1) * 55 + rand(-10, 10)), amp: kind === 'blowfish' ? 40 : rand(100, 130),
       w: rand(0.7, 1.1), ph: rand(0, 6),
     });
   }
@@ -150,7 +151,7 @@ export function fishing(host: MinigameHost): Game {
         if (!fi.dart) fi.vx += (Math.sign(fi.vx || 1) * cruise - fi.vx) * dt * 1.5;
         fi.x += fi.vx * dt;
         if ((fi.x < 60 && fi.vx < 0) || (fi.x > SW - 60 && fi.vx > 0)) fi.vx = -fi.vx;
-        fi.y = fi.base + Math.sin(t * fi.w + fi.ph) * fi.amp;
+        fi.y = clamp(fi.base + Math.sin(t * fi.w + fi.ph) * fi.amp, 50, SH - 50);
         fi.e.style.transform = `translate(${fi.x - fi.size / 2}px,${fi.y - fi.size / 2}px) scaleX(${fi.vx > 0 ? -1 : 1}) rotate(${Math.sin(t * 8 + fi.ph) * 6}deg)`;
       }
       shadow.style.transform = `translate(${px}px,${SY}px)`;
@@ -192,7 +193,7 @@ export function fishing(host: MinigameHost): Game {
       // human-ish: commits a bit early or late now and then
       const close = tgt && Math.hypot(tgt.x + tgt.vx * rand(-0.5, 0.3) - px, tgt.y - SY) < ZONE * 1.3;
       // ...and sometimes just swipes at nothing, like people do
-      if (botWait <= 0 && !blow && (close || Math.random() < dt * 0.5)) { botWait = rand(0.9, 1.5); this.key(fake('Space'), true); }
+      if (botWait <= 0 && !blow && (close || Math.random() < dt * 0.6)) { botWait = rand(1.6, 2.6); this.key(fake('Space'), true); }
     },
     finish() { f.finish(); },
     dispose: () => f.dispose(),

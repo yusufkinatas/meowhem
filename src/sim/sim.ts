@@ -93,7 +93,11 @@ type Target = string | undefined; // player id, 'sitter' | 'cat', or everyone
 
 /** sitter faces the cats, cats face the sitter */
 export function spawnYaw(level: LevelData, role: Role, p: Vec3): number {
-  const cs = level.spawns.cats;
+  const cs = level.spawns.cats, sp = level.spawns;
+  // the level's own facing (ADDENDUM M22) when it gives one
+  if (role === 'sitter' && sp.sitterYaw !== undefined) return sp.sitterYaw;
+  const i = cs.findIndex((c) => c[0] === p[0] && c[1] === p[1] && c[2] === p[2]);
+  if (role === 'cat' && i >= 0 && sp.catYaws?.[i] !== undefined) return sp.catYaws[i];
   const t: Vec3 = role === 'sitter' && cs.length ? [cs.reduce((a, c) => a + c[0], 0) / cs.length, 0, cs.reduce((a, c) => a + c[2], 0) / cs.length] : level.spawns.sitter;
   return yawTo(p, t);
 }
@@ -407,7 +411,15 @@ export class Sim {
       s.loaf = false;
       s.charge = 0;
       if (st.hypnotized && s.lookAt) s.yaw = yawTo(s.p, s.lookAt);
+      if (st.caged) s.mash = clamp(1 - st.caged / c.cageTotal, 0, 1); // the escape strip's time-left bar, every tick
       c.motion.follow(s.p, s.yaw);
+      // bots still think while forced: wiggle out, rattle the carrier, mash out of TV, press in fights
+      if (c.brain && playing) {
+        const it = c.brain.think(this.botView(c), dt);
+        c.intent = it;
+        if (it.mash) this.action(s.id, { a: 'mash' });
+        if (it.hiss) this.action(s.id, { a: 'hiss' });
+      }
       return;
     }
     if (!c.brain) return; // players: owner sends transforms
@@ -933,7 +945,7 @@ export class Sim {
       x.s.p = add(p, fwd(yawTo(p, x.s.p)), 0.25);
       x.s.yaw = yawTo(x.s.p, p);
       if (x.s.item) this.dropItem(x.s);
-      if (!x.s.bot) this.emit({ e: 'mgOpen', key, kind: 'fight', data: { opponent: y.s.name } }, x.s.id);
+      if (!x.s.bot) this.emit({ e: 'mgOpen', key, kind: 'fight', data: { opponent: y.s.name, fur: x.info.look?.furColor, opponentFur: y.info.look?.furColor } }, x.s.id);
       this.fx('anger', add(x.s.p, [0, 0.6, 0]), { follow: x.s.id });
     }
     this.fights.push({ a: a.s.id, b: b.s.id, key, t: 0, sa: 0, sb: 0, fa: false, fb: false, brawl: false, p, head: this.rng() * Math.PI * 2, turnT: F.turnEvery, hit: new Set() });
@@ -949,14 +961,16 @@ export class Sim {
     if (a) f.sa += d; else f.sb += d;
   }
 
-  private endFight(f: Fight) {
+  /** winner: id of the winning cat, 'off' for a called-off standoff, undefined = interrupted */
+  private endFight(f: Fight, winner?: string) {
     this.fights.splice(this.fights.indexOf(f), 1);
     for (const id of [f.a, f.b]) {
       const x = this.byId.get(id);
       if (!x) continue;
       delete x.s.st.fight;
       x.s.tp++;
-      if (!x.s.bot) this.emit({ e: 'mgClose', key: f.key }, id);
+      const result = winner === undefined ? undefined : winner === 'off' ? 'off' : winner === id ? 'win' : 'lose';
+      if (!x.s.bot) this.emit({ e: 'mgClose', key: f.key, result }, id);
     }
   }
 
@@ -975,7 +989,7 @@ export class Sim {
       if (!f.brawl && f.t >= F.stare) {
         if (!f.fa && !f.fb) {
           // the staredown that never turns into a fight
-          this.endFight(f);
+          this.endFight(f, 'off');
           for (const x of [a, b]) { this.gesture(x, 'groom', F.groom); this.stat(x.s.id, 'standoffs', 1); }
           continue;
         }
@@ -1011,9 +1025,9 @@ export class Sim {
         }
       }
       if (f.t < F.lock) continue;
-      this.endFight(f);
       const aw = f.sa === f.sb ? this.rng() < 0.5 : f.sa > f.sb;
       const [w, l] = aw ? [a, b] : [b, a];
+      this.endFight(f, w.s.id);
       this.give(w.s, 'crown', F.crown);
       this.give(l.s, 'dizzy', F.dizzy);
       this.stat(w.s.id, 'fightsWon', 1);
@@ -1425,6 +1439,7 @@ export class Sim {
       options.push({
         key: k.key, label: k.label, ok: k.ok, at: k.anchor, range: k.range, spot: k.spot?.id ?? null,
         room: this.roomAt(k.anchor), interactable: k.def?.id ?? '', alert: !!k.use.alert,
+        progress: this.interactions.progress.get(k.pkey) ?? 0,
       });
     }
     return {

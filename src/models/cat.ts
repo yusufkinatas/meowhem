@@ -55,17 +55,18 @@ function rest(o: Float32Array) {
 type Anim = CatAnim | 'noodle' | 'tossed';
 
 // ---------------------------------------------------------------- outline
-let outlineMat: THREE.MeshBasicMaterial | null = null;
-function outline(): THREE.MeshBasicMaterial {
-  if (outlineMat) return outlineMat;
+/** inverted-hull outline, one per cat (same shader program): uPuff spikes it up into bristling fur */
+function outline(puff: { value: number }): THREE.MeshBasicMaterial {
   const m = new THREE.MeshBasicMaterial({ color: OUTLINE_COLOR, side: THREE.BackSide });
   m.onBeforeCompile = (sh) => {
+    sh.uniforms.uPuff = puff;
     sh.vertexShader = sh.vertexShader
-      .replace('#include <common>', '#include <common>\nattribute vec3 onrm;')
-      .replace('#include <begin_vertex>', '#include <begin_vertex>\ntransformed += normalize(onrm) * 0.026;');
+      .replace('#include <common>', '#include <common>\nattribute vec3 onrm;\nuniform float uPuff;')
+      .replace('#include <begin_vertex>', `#include <begin_vertex>
+        float bristle = fract(sin(dot(position, vec3(12.9898, 78.233, 45.164))) * 43758.5453);
+        transformed += normalize(onrm) * (0.026 + uPuff * (0.012 + 0.05 * bristle));`);
   };
-  m.customProgramCacheKey = () => 'meowhem-cat-outline';
-  outlineMat = m;
+  m.customProgramCacheKey = () => 'meowhem-cat-outline-v2';
   return m;
 }
 
@@ -80,6 +81,13 @@ const TAIL_STIFF = [260, 170, 120, 90];
 type Pair = 'lid' | 'bot' | 'pw' | 'ph' | 'browAng' | 'browH';
 const both = (f: FaceT, k: Pair, v: number) => { f[k][0] = v; f[k][1] = v; };
 const _xAxis = new THREE.Vector3(1, 0, 0);
+/** ground contact probes = the lower hull vertices of the Kenney parts: paw sole + bevel ring (leg pivot space), cube bottom + bevels (cube space) */
+const sym = (pts: number[][]) => pts.flatMap(([x, y, z]) => [[x, y, z], [-x, y, z], [x, y, -z], [-x, y, -z]]);
+const PAW_PROBES = sym([[0.112, -0.3, 0.112], [0.125, -0.238, 0.188], [0.188, -0.238, 0.125]]);
+const CUBE_PROBES = sym([[0.313, 0, 0.313], [0.5, 0.125, 0.5], [0.625, 0.313, 0.313], [0.313, 0.313, 0.625]]);
+/** anims that leave the floor on purpose (no ground snap) / gaits that only get lifted out of the floor (keep the hop) */
+const FREE = new Set<string>(['jump', 'fall', 'tossed', 'grabbed', 'noodle', 'climb', 'hangDoor']);
+const LIFT_ONLY = new Set<string>(['walk', 'run', 'carryMouth', 'fight']);
 
 /** face targets (per eye where it matters) */
 interface FaceT {
@@ -136,11 +144,15 @@ class Cat implements CatModelApi {
   private poseInner = new THREE.Group();
   private body = new THREE.Group();
   private head = new THREE.Group();
+  private cube = new THREE.Group();
+  private gOff = 0;
   private legs: THREE.Group[] = [];
   private ears: THREE.Group[] = [];
   private bones: THREE.Bone[] = [];
   private boneRest: number[] = [];
   private furMat: THREE.MeshToonMaterial;
+  private puffU = { value: 0 };
+  private outlineMat = outline(this.puffU);
   private face: { mat: THREE.MeshToonMaterial; u: FaceUniforms };
   private accSlot = new THREE.Group();
   private facePlane!: THREE.Mesh;
@@ -176,7 +188,7 @@ class Cat implements CatModelApi {
   private headYaw = 0; private headPitch = 0;
   private lookYaw = 0; private lookPitch = 0; private hasLook = 0;
   private saccT = 0; private saccX = 0; private saccY = 0;
-  private wet = 0; private puff = 0; private high = 0;
+  private wet = 0; private puff = 0; private high = 0; private cageK = 1;
   private hue = 0;
   // face
   private ft = newFaceT();
@@ -212,13 +224,13 @@ class Cat implements CatModelApi {
       m.castShadow = true;
       m.receiveShadow = true;
       parent.add(m);
-      const o = skinned ? new THREE.SkinnedMesh(geo, outline()) : new THREE.Mesh(geo, outline());
+      const o = skinned ? new THREE.SkinnedMesh(geo, this.outlineMat) : new THREE.Mesh(geo, this.outlineMat);
       o.castShadow = false;
       o.raycast = () => {};
       parent.add(o);
       return [m, o] as const;
     };
-    const cube = new THREE.Group();
+    const cube = this.cube;
     cube.position.y = -H;
     this.head.add(cube);
     mesh(g.cube, cube);
@@ -265,8 +277,7 @@ class Cat implements CatModelApi {
     this.head.add(tailRoot);
 
     // face decal on the flat front
-    const facePlane = this.facePlane = new THREE.Mesh(faceGeo(), this.face.mat);
-    facePlane.position.set(0, 0, H + 0.004);
+    const facePlane = this.facePlane = new THREE.Mesh(g.face, this.face.mat);
     facePlane.receiveShadow = true;
     facePlane.renderOrder = 1;
     this.head.add(facePlane);
@@ -293,7 +304,7 @@ class Cat implements CatModelApi {
     this.chonk = clamp(look.chonk ?? 0, 0, 1);
     // the body widens with chonk; face, ears and hats keep their shape (chubby cheeks instead of stretched eyes)
     const keep = (1 + 0.08 * this.chonk) / (1 + 0.32 * this.chonk);
-    this.facePlane.scale.x = keep;
+    this.face.u.uAspect.value = 1 / keep; // the decal stretches with the cube, the drawing doesn't
     this.accSlot.scale.x = keep;
     for (const e of this.ears) e.scale.x = keep;
     const u = this.face.u;
@@ -344,6 +355,7 @@ class Cat implements CatModelApi {
     this.root.removeFromParent();
     this.furMat.dispose();
     this.face.mat.dispose();
+    this.outlineMat.dispose();
   }
 
   // ---------------------------------------------------------------- update
@@ -371,7 +383,7 @@ class Cat implements CatModelApi {
     if (a === 'land') a = 'idle';
     if (a === 'grabbed' && s.noodle) a = 'noodle';
     if (s.tossed && !s.grounded) a = 'tossed';
-    if (a === 'idle' && s.speed < 0.15) {
+    if (a === 'idle' && s.speed < 0.15 && !s.puffed && !s.talk) {
       this.idleT += dt;
       if (this.idleT > 6) a = 'loaf';
       else if (this.idleT > 2.8 && this.idleGroom) a = 'groom';
@@ -768,7 +780,9 @@ class Cat implements CatModelApi {
     const legLen = 1 - 0.22 * ch;
     const puffScale = 1 + 0.12 * this.puff;
     const wetScale = 1 - 0.08 * this.wet;
-    const k = puffScale * wetScale;
+    // the carrier basket is 0.36 m tall and 0.46 m deep: a caged cat squishes into a compact loaf that fits any way round
+    this.cageK = damp(this.cageK, this.anim === 'caged' ? 0.76 : 1, 10, dt);
+    const k = puffScale * wetScale * this.cageK;
     this.pose.position.set(o[PX], o[PY] + CY, o[PZ]);
     this.pose.rotation.set(o[PRX], o[PRY], o[PRZ]);
     this.pose.scale.setScalar(k);
@@ -834,6 +848,21 @@ class Cat implements CatModelApi {
       this.bones[j].scale.set(j === 0 ? brush : 1, j === 0 ? brush : 1, 1);
     }
 
+    // ground contact: planted poses sit exactly on the floor (no floating, no paws or butt in the floor)
+    this.root.updateMatrixWorld(true);
+    let corr = 0;
+    if (s.grounded && !FREE.has(this.anim)) {
+      const y0 = this.root.matrixWorld.elements[13];
+      let m = Infinity;
+      for (const L of this.legs) for (const p of PAW_PROBES) { _v.set(p[0], p[1], p[2]).applyMatrix4(L.matrixWorld); if (_v.y < m) m = _v.y; }
+      for (const p of CUBE_PROBES) { _v.set(p[0], p[1], p[2]).applyMatrix4(this.cube.matrixWorld); if (_v.y < m) m = _v.y; }
+      corr = (y0 - m) / (this.S * this.root.scale.y);
+      if (LIFT_ONLY.has(this.anim)) corr = Math.max(0, corr);
+    }
+    // out of the floor at once, settle down onto it quickly (no pop when a pose blends in)
+    this.gOff = corr > this.gOff ? corr : damp(this.gOff, corr, 18, dt);
+    this.pose.position.y += this.gOff;
+
     // scruff pin: while held, the scruff stays put and the body hangs under it
     if (this.anim === 'grabbed' || this.anim === 'noodle') {
       this.root.updateMatrixWorld(true);
@@ -843,6 +872,7 @@ class Cat implements CatModelApi {
       this.pose.position.add(_w);
     }
 
+    this.puffU.value = this.puff;
     // materials: wet darkens, catnip pulses a rainbow tint
     this.baseColor.setRGB(1 - 0.38 * this.wet, 1 - 0.34 * this.wet, 1 - 0.22 * this.wet);
     this.furMat.color.copy(this.baseColor);
@@ -952,9 +982,6 @@ class Cat implements CatModelApi {
     u.uMouth.value.y = c.blush;
   }
 }
-
-let faceGeometry: THREE.PlaneGeometry | null = null;
-const faceGeo = () => (faceGeometry ??= new THREE.PlaneGeometry(1.2, 1.2));
 
 let preloaded = false;
 export function createCat(look: CatLook): CatModelApi {

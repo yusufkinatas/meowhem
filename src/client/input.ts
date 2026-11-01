@@ -29,7 +29,12 @@ export class Input {
   private key(e: KeyboardEvent, isDown: boolean) {
     const t = e.target as HTMLElement | null;
     if (t && (t.tagName === 'INPUT' || t.tagName === 'SELECT' || t.tagName === 'TEXTAREA')) return;
-    if (this.intercept?.(e, isDown)) { e.preventDefault(); return; }
+    if (this.intercept?.(e, isDown)) {
+      e.preventDefault();
+      // a key let go inside a minigame is still let go: otherwise E stays "held" and the next E press is lost
+      if (!isDown) this.set(e.code, false);
+      return;
+    }
     if (['Tab', 'Space', 'KeyW', 'KeyA', 'KeyS', 'KeyD', 'KeyE', 'KeyQ', 'KeyR', 'KeyF'].includes(e.code)) e.preventDefault();
     this.set(e.code, isDown, e.repeat);
   }

@@ -1,4 +1,5 @@
 import type { MinigameHost } from '../shared/contracts';
+import { CFG } from '../config';
 import { type Game, frame, img, shake, pop, fake, gate, side, rand } from './kit';
 
 // ADDENDUM 4.7: slim strip. A wiggle = 1/20, a repeated paw 0.25/20, the hiss 4/20 (once).
@@ -9,7 +10,11 @@ export function escape(host: MinigameHost): Game {
   const mode = host.data?.mode === 'cage' ? 'cage' : host.data?.mode === 'tv' ? 'tv' : 'grab';
   const grab = mode === 'grab';
   const limp = grab ? Number(host.data?.limp ?? 1) || 0 : 0;
-  const f = frame(host, 'escape', '', grab ? [[['A', 'D'], 'wiggle'], [['R'], 'hiss']] : [[['A', 'D'], 'wiggle']], { slim: true, invert: mode === 'cage' });
+  // caged: the host only refreshes progress on a wiggle, so the time-left bar drains locally and jumps on wiggles
+  const cageTime = Number(host.data?.cageTime) || CFG.carrier.time;
+  let served = 0;
+  const view: MinigameHost = mode === 'cage' ? { ...host, getProgress: () => served } : host;
+  const f = frame(view, 'escape', '', grab ? [[['A', 'D'], 'wiggle'], [['R'], 'hiss']] : [[['A', 'D'], 'wiggle']], { slim: true, invert: mode === 'cage' });
   const { panel, root } = f;
   root.classList.add(`es-${mode}`);
   const hand = grab ? img('pinching_hand', 'es-hand', panel) : null;
@@ -38,7 +43,7 @@ export function escape(host: MinigameHost): Game {
   }
 
   function hiss(): void {
-    if (!grab || hissed || t < limp) return;
+    if (!grab || hissed) return; // the host takes the hiss even during the limp
     hissed = true;
     lastInput = t;
     noodle = false;
@@ -51,6 +56,7 @@ export function escape(host: MinigameHost): Game {
 
   return {
     update(dt) {
+      if (mode === 'cage') served = Math.min(1, Math.max(served + dt / cageTime, host.getProgress()));
       f.tick(dt);
       t += dt;
       const limpNow = t < limp;
@@ -58,7 +64,6 @@ export function escape(host: MinigameHost): Game {
       f.dim('KeyD', limpNow);
       f.light('KeyA', !limpNow && last >= 0);
       f.light('KeyD', !limpNow && last < 0);
-      if (grab && !hissed) f.dim('KeyR', limpNow);
       if (grab && !noodle && !limpNow && t - Math.max(lastInput, limp) > NOODLE_AFTER) {
         noodle = true;
         root.classList.add('es-noodle');

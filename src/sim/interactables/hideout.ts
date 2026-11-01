@@ -37,6 +37,8 @@ defineInteractable<S>({
       if (!under(ctx, c)) { s.t.delete(c.id); continue; }
       if (ctx.time < (s.until.get(c.id) ?? 0)) { slideOut(ctx, c); continue; }
       ctx.give(c, 'hidden', 0.3 - (c.st.hidden ?? 0));
+      // out of the sitter's reach under there (the grab prompt greys out)
+      if ((c.st.grabImmune ?? 0) < 0.25) ctx.give(c, 'grabImmune', 0.25 - (c.st.grabImmune ?? 0));
       if (c.work?.key.startsWith('i:hideout:')) continue; // eating isn't boredom
       const t = (s.t.get(c.id) ?? 0) + dt;
       s.t.set(c.id, t);

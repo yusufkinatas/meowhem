@@ -147,7 +147,11 @@ export function buildNav(o: {
   // ---- spots: a node on each, floor spots join the grid, raised ones join the surfaces
   for (const s of o.spots) {
     if (s.pos[1] < 0.1) {
-      const id = node([s.pos[0], 0, s.pos[2]], s.room);
+      // a spot hugging its object (carrier): back the node off along -facing until the sitter fits
+      let x = s.pos[0], z = s.pos[2];
+      for (let k = 0; k < 8 && !C.free(x, 0, z, 'sitter'); k++) { x -= Math.sin(s.facing) * 0.05; z -= Math.cos(s.facing) * 0.05; }
+      if (!C.free(x, 0, z, 'sitter')) { x = s.pos[0]; z = s.pos[2]; }
+      const id = node([x, 0, z], s.room);
       if (!attachFloor(id, s.room)) for (const f of nearFloor(s.pos, s.room, 2.2, 2)) link(id, f, 'walk', { catOnly: true });
       floor.push(id);
     } else {

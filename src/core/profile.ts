@@ -11,7 +11,7 @@ export const COAT_PRESETS = [
 ] as const;
 
 export const PATTERNS: FurPattern[] = ['solid', 'tabby', 'tuxedo', 'calico', 'siamese', 'tortie'];
-export const ACCESSORIES: CatAccessory[] = ['none', 'bell', 'bow', 'bandana', 'tinyHat', 'glasses', 'flowerCrown', 'cone'];
+export const ACCESSORIES: CatAccessory[] = ['none', 'bell', 'bow', 'tinyHat', 'glasses', 'flowerCrown', 'cone'];
 export const EYE_COLORS = ['#7cc36a', '#f2c14e', '#5aa9e6', '#e08a3c'];
 
 export interface Profile { name: string; look: CatLook }
