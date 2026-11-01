@@ -42,7 +42,9 @@ export type CatAnim =
   | 'carryMouth'   // walking while holding something in the mouth (salmon, toy)
   | 'hairball'     // the hack-hack-hack animation
   | 'grabbed'      // held by the scruff: limp, legs dangling
-  | 'caged' | 'stunned' | 'hypnotized' | 'fight' | 'hangDoor';
+  | 'caged' | 'stunned' | 'hypnotized' | 'fight' | 'hangDoor'
+  | 'tap'          // slow push: one paw reaches forward low and slow
+  | 'groom';       // sit, lick a raised paw, wipe the face
 
 export type CatFace =
   | 'neutral' | 'happy' | 'smug' | 'angry' | 'shock' | 'sad' | 'derp'
@@ -63,11 +65,14 @@ export interface CatVisualState {
   pounceCharge?: number;    // 0..1 while charging a pounce (butt wiggle intensity)
   wiggle?: number;          // 0..1 struggle intensity while grabbed/caged
   carrying?: 'salmon' | 'toyMouse' | 'sock' | null;
+  noodle?: boolean;         // held and gone boneless (purring)
+  tossed?: boolean;         // airborne after a toss or slip launch
 }
 
 export interface SitterVisualState {
   anim: 'idle' | 'walk' | 'run' | 'jump' | 'fall' | 'land' | 'carry' | 'spray' | 'clean'
-      | 'interact' | 'shakeTreats' | 'stunned' | 'grabReach' | 'celebrate' | 'despair' | 'scoop';
+      | 'interact' | 'shakeTreats' | 'stunned' | 'grabReach' | 'celebrate' | 'despair' | 'scoop'
+      | 'slip' | 'toss' | 'clap';
   face: 'neutral' | 'angry' | 'panic' | 'smug' | 'tired' | 'shock' | 'happy' | 'gag';
   speed: number;
   vy: number;
@@ -208,7 +213,8 @@ export type SoundName =
   | 'splash' | 'waterRun' | 'flush' | 'pickup' | 'drop' | 'whoosh' | 'fight' | 'ding' | 'buzz'
   | 'breaker' | 'tvOn' | 'treatShake' | 'crunch' | 'hairball' | 'cageClose' | 'cageOpen'
   | 'paperRip' | 'dig' | 'step' | 'land' | 'uiClick' | 'uiHover' | 'countdown' | 'go'
-  | 'win' | 'lose' | 'carArrive' | 'alarm' | 'pop' | 'gulp' | 'chatter' | 'door';
+  | 'win' | 'lose' | 'carArrive' | 'alarm' | 'pop' | 'gulp' | 'chatter' | 'door'
+  | 'clap' | 'keys' | 'shutter';
 
 export interface AudioApi {
   /** must be called from a user gesture before sounds play */
@@ -256,6 +262,8 @@ export interface MinigameHost {
   sound?(name: SoundName): void;
   /** extra context, e.g. { opponent: 'Mochi' } for fights, { order: 'catnip' } */
   data?: Record<string, unknown>;
+  /** 0 = no sitter threat, 1 = sitter within ~2.5 m (danger indicator) */
+  danger?(): number;
 }
 
 export interface MinigameApi {

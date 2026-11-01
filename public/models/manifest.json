@@ -1,0 +1,3151 @@
+{
+ "bird": {
+  "file": "chars/bird.glb",
+  "category": "chars",
+  "name": "Cube Pets: animal-chick",
+  "license": "CC0 1.0",
+  "author": "Kenney",
+  "sourceUrl": "https://kenney.nl/assets/cube-pets",
+  "scale": [
+   0.100361,
+   0.100361,
+   0.100361
+  ],
+  "rotation": [
+   0,
+   0,
+   0
+  ],
+  "origin": "feet",
+  "offset": [
+   0,
+   0,
+   -0.005
+  ],
+  "size": [
+   0.2204,
+   0.16,
+   0.1355
+  ],
+  "material": "toon",
+  "clips": {
+   "idle": "idle",
+   "walk": "walk",
+   "run": "run",
+   "eat": "eat",
+   "happy": "gesture-positive"
+  },
+  "notes": "Window bird. Separate wing meshes."
+ },
+ "cat": {
+  "file": "chars/cat.glb",
+  "category": "chars",
+  "name": "Cube Pets: animal-cat",
+  "license": "CC0 1.0",
+  "author": "Kenney",
+  "sourceUrl": "https://kenney.nl/assets/cube-pets",
+  "scale": [
+   0.263159,
+   0.263159,
+   0.263159
+  ],
+  "rotation": [
+   0,
+   0,
+   0
+  ],
+  "origin": "feet",
+  "offset": [
+   0,
+   0,
+   0.0528
+  ],
+  "size": [
+   0.3289,
+   0.45,
+   0.4753
+  ],
+  "material": "toon",
+  "clips": {
+   "static": "static",
+   "idle": "idle",
+   "walk": "walk",
+   "run": "run",
+   "eat": "eat",
+   "happy": "gesture-positive",
+   "no": "gesture-negative",
+   "dance": "dance"
+  },
+  "nodes": {
+   "body": "body",
+   "face": "Group",
+   "tail": "tail",
+   "legFL": "leg-front-left",
+   "legFR": "leg-front-right",
+   "legBL": "leg-back-left",
+   "legBR": "leg-back-right"
+  },
+  "notes": "Node-animated (not skinned): each part is its own mesh, so procedural gait/tail/squash are plain node rotations. Eyes are UV-mapped palette cells on the flat front face of `body`; overlay face decals there. Material + colormap are shared by every clone: clone them before recoloring."
+ },
+ "sitter": {
+  "file": "chars/sitter.glb",
+  "category": "chars",
+  "name": "KayKit Adventurers: Rogue",
+  "license": "CC0 1.0",
+  "author": "Kay Lousberg (KayKit)",
+  "sourceUrl": "https://github.com/KayKit-Game-Assets/KayKit-Character-Pack-Adventures-1.0",
+  "scale": [
+   0.800181,
+   0.800181,
+   0.800181
+  ],
+  "rotation": [
+   0,
+   0,
+   0
+  ],
+  "origin": "feet",
+  "offset": [
+   0,
+   0,
+   -0.0092
+  ],
+  "size": [
+   1.5544,
+   1.75,
+   0.8126
+  ],
+  "material": "toon",
+  "clips": {
+   "idle": "Unarmed_Idle",
+   "walk": "Walking_A",
+   "run": "Running_A",
+   "jump": "Jump_Start",
+   "fall": "Jump_Idle",
+   "land": "Jump_Land",
+   "carry": "1H_Ranged_Aiming",
+   "spray": "1H_Ranged_Shoot",
+   "clean": "Interact",
+   "interact": "Interact",
+   "shakeTreats": "Use_Item",
+   "stunned": "Hit_A",
+   "grabReach": "PickUp",
+   "celebrate": "Cheer",
+   "despair": "Sit_Floor_Down",
+   "despairIdle": "Sit_Floor_Idle",
+   "scoop": "PickUp",
+   "throw": "Throw",
+   "walkBack": "Walking_Backwards"
+  },
+  "nodes": {
+   "head": "Rogue_Head",
+   "body": "Rogue_Body",
+   "handR": "handslotr",
+   "handL": "handslotl",
+   "headBone": "head"
+  },
+  "notes": "Skinned 41-joint rig. Weapons and cape removed. Bones handslotr / handslotl = spray bottle + scruff anchors. Single palette texture (rogue_texture): recolor skin/hair/shirt by repainting a canvas copy."
+ },
+ "alarmClock": {
+  "file": "decor/alarmClock.glb",
+  "category": "decor",
+  "name": "Alarm Clock",
+  "license": "CC0 1.0",
+  "author": "CreativeTrio",
+  "sourceUrl": "https://poly.pizza/m/y5f363OS9C",
+  "scale": [
+   0.677113,
+   0.677113,
+   0.677113
+  ],
+  "rotation": [
+   0,
+   0,
+   0
+  ],
+  "origin": "feet",
+  "offset": [
+   0,
+   0,
+   0.0017
+  ],
+  "size": [
+   0.0842,
+   0.13,
+   0.0428
+  ],
+  "material": "toon"
+ },
+ "boots": {
+  "file": "decor/boots.glb",
+  "category": "decor",
+  "name": "boots",
+  "license": "CC0 1.0",
+  "author": "Isa Lousberg (Tiny Treats)",
+  "sourceUrl": "https://github.com/TinyTreats-Game-Assets/Tiny-Treats-Homely-House-1.0",
+  "scale": [
+   0.40874,
+   0.40874,
+   0.40874
+  ],
+  "rotation": [
+   0,
+   0,
+   0
+  ],
+  "origin": "feet",
+  "offset": [
+   0,
+   0,
+   -0.0203
+  ],
+  "size": [
+   0.3885,
+   0.24,
+   0.2899
+  ],
+  "material": "toon"
+ },
+ "bread": {
+  "file": "decor/bread.glb",
+  "category": "decor",
+  "name": "bread",
+  "license": "CC0 1.0",
+  "author": "Isa Lousberg (Tiny Treats)",
+  "sourceUrl": "https://opengameart.org/content/tiny-treats-baked-goods-set",
+  "scale": [
+   0.333193,
+   0.333193,
+   0.333193
+  ],
+  "rotation": [
+   0,
+   0,
+   0
+  ],
+  "origin": "feet",
+  "offset": [
+   0,
+   0.0008,
+   0
+  ],
+  "size": [
+   0.1537,
+   0.1718,
+   0.28
+  ],
+  "material": "toon"
+ },
+ "ducky": {
+  "file": "decor/ducky.glb",
+  "category": "decor",
+  "name": "ducky",
+  "license": "CC0 1.0",
+  "author": "Isa Lousberg (Tiny Treats)",
+  "sourceUrl": "https://github.com/TinyTreats-Game-Assets/Tiny-Treats-Bubbly-Bathroom-1.0",
+  "scale": [
+   0.248144,
+   0.248144,
+   0.248144
+  ],
+  "rotation": [
+   0,
+   0,
+   0
+  ],
+  "origin": "feet",
+  "offset": [
+   0,
+   0.0025,
+   -0.01
+  ],
+  "size": [
+   0.074,
+   0.1,
+   0.1044
+  ],
+  "material": "toon"
+ },
+ "fishBones": {
+  "file": "decor/fishBones.glb",
+  "category": "decor",
+  "name": "fish-bones",
+  "license": "CC0 1.0",
+  "author": "Kenney",
+  "sourceUrl": "https://kenney.nl/assets/food-kit",
+  "scale": [
+   0.471847,
+   0.471847,
+   0.471847
+  ],
+  "rotation": [
+   0,
+   0,
+   0
+  ],
+  "origin": "feet",
+  "offset": [
+   0,
+   0,
+   0
+  ],
+  "size": [
+   0.1469,
+   0.0342,
+   0.3
+  ],
+  "material": "toon"
+ },
+ "fruitBowl": {
+  "file": "decor/fruitBowl.glb",
+  "category": "decor",
+  "name": "grapes_bowl",
+  "license": "CC0 1.0",
+  "author": "Isa Lousberg (Tiny Treats)",
+  "sourceUrl": "https://tinytreats.itch.io/pleasant-picnic",
+  "scale": [
+   0.550001,
+   0.550001,
+   0.550001
+  ],
+  "rotation": [
+   0,
+   0,
+   0
+  ],
+  "origin": "feet",
+  "offset": [
+   0,
+   0,
+   0
+  ],
+  "size": [
+   0.22,
+   0.1318,
+   0.22
+  ],
+  "material": "toon"
+ },
+ "kettle": {
+  "file": "decor/kettle.glb",
+  "category": "decor",
+  "name": "kettle",
+  "license": "CC0 1.0",
+  "author": "Isa Lousberg (Tiny Treats)",
+  "sourceUrl": "https://github.com/TinyTreats-Game-Assets/Tiny-Treats-Charming-Kitchen-1.0",
+  "scale": [
+   0.369619,
+   0.369619,
+   0.369619
+  ],
+  "rotation": [
+   0,
+   0,
+   0
+  ],
+  "origin": "feet",
+  "offset": [
+   0.0101,
+   0,
+   0
+  ],
+  "size": [
+   0.3004,
+   0.22,
+   0.2218
+  ],
+  "material": "toon"
+ },
+ "packageOpen": {
+  "file": "decor/packageOpen.glb",
+  "category": "decor",
+  "name": "Empty Box",
+  "license": "CC0 1.0",
+  "author": "CreativeTrio",
+  "sourceUrl": "https://poly.pizza/m/pZBpmjtvw8",
+  "scale": [
+   1.05506,
+   1.05506,
+   1.05506
+  ],
+  "rotation": [
+   0,
+   0,
+   0
+  ],
+  "origin": "feet",
+  "offset": [
+   -0.0378,
+   0,
+   0.0378
+  ],
+  "size": [
+   0.5,
+   0.299,
+   0.5
+  ],
+  "material": "toon"
+ },
+ "toaster": {
+  "file": "decor/toaster.glb",
+  "category": "decor",
+  "name": "toaster",
+  "license": "CC0 1.0",
+  "author": "Isa Lousberg (Tiny Treats)",
+  "sourceUrl": "https://github.com/TinyTreats-Game-Assets/Tiny-Treats-Charming-Kitchen-1.0",
+  "scale": [
+   0.283815,
+   0.283815,
+   0.283815
+  ],
+  "rotation": [
+   0,
+   0,
+   0
+  ],
+  "origin": "feet",
+  "offset": [
+   -0.0087,
+   0,
+   0
+  ],
+  "size": [
+   0.26,
+   0.1703,
+   0.1419
+  ],
+  "material": "toon"
+ },
+ "towels": {
+  "file": "decor/towels.glb",
+  "category": "decor",
+  "name": "towel_stacked",
+  "license": "CC0 1.0",
+  "author": "Isa Lousberg (Tiny Treats)",
+  "sourceUrl": "https://github.com/TinyTreats-Game-Assets/Tiny-Treats-Bubbly-Bathroom-1.0",
+  "scale": [
+   0.436384,
+   0.436384,
+   0.436384
+  ],
+  "rotation": [
+   0,
+   0,
+   0
+  ],
+  "origin": "feet",
+  "offset": [
+   0,
+   0,
+   0
+  ],
+  "size": [
+   0.35,
+   0.2618,
+   0.35
+  ],
+  "material": "toon"
+ },
+ "aquarium": {
+  "file": "furniture/aquarium.glb",
+  "category": "furniture",
+  "name": "Fish Tank",
+  "license": "CC-BY 3.0",
+  "author": "Chris Ross",
+  "sourceUrl": "https://poly.pizza/m/2Rb9zxgkDEM",
+  "scale": [
+   1.20539,
+   1.20539,
+   1.20539
+  ],
+  "rotation": [
+   0,
+   0,
+   0
+  ],
+  "origin": "feet",
+  "offset": [
+   -0.0204,
+   0.2595,
+   0.0341
+  ],
+  "size": [
+   0.9,
+   0.6402,
+   0.5733
+  ],
+  "material": "toon",
+  "notes": "Glass is transparent (no shadow). Built-in fish are materials `mat18` + `mat13` (one mesh per color, not per fish): hide them and swim 3 `fish` clones (rotation reset) inside for tank.fish 0..3."
+ },
+ "armchair": {
+  "file": "furniture/armchair.glb",
+  "category": "furniture",
+  "name": "armchair_pillows",
+  "license": "CC0 1.0",
+  "author": "Kay Lousberg (KayKit)",
+  "sourceUrl": "https://github.com/KayKit-Game-Assets/KayKit-Furniture-Bits-1.0",
+  "scale": [
+   0.6667,
+   0.6667,
+   0.6667
+  ],
+  "rotation": [
+   0,
+   0,
+   0
+  ],
+  "origin": "feet",
+  "offset": [
+   0,
+   0,
+   -0.0333
+  ],
+  "size": [
+   1.2001,
+   0.8161,
+   1.0667
+  ],
+  "material": "toon"
+ },
+ "bathMat": {
+  "file": "furniture/bathMat.glb",
+  "category": "furniture",
+  "name": "mat",
+  "license": "CC0 1.0",
+  "author": "Isa Lousberg (Tiny Treats)",
+  "sourceUrl": "https://github.com/TinyTreats-Game-Assets/Tiny-Treats-Bubbly-Bathroom-1.0",
+  "scale": [
+   0.449968,
+   0.449968,
+   0.449968
+  ],
+  "rotation": [
+   0,
+   0,
+   0
+  ],
+  "origin": "feet",
+  "offset": [
+   0,
+   0,
+   0
+  ],
+  "size": [
+   0.9,
+   0.045,
+   0.5852
+  ],
+  "material": "toon"
+ },
+ "bathSink": {
+  "file": "furniture/bathSink.glb",
+  "category": "furniture",
+  "name": "cabinet_bathroom",
+  "license": "CC0 1.0",
+  "author": "Isa Lousberg (Tiny Treats)",
+  "sourceUrl": "https://github.com/TinyTreats-Game-Assets/Tiny-Treats-Bubbly-Bathroom-1.0",
+  "scale": [
+   0.455034,
+   0.455034,
+   0.455034
+  ],
+  "rotation": [
+   0,
+   0,
+   0
+  ],
+  "origin": "feet",
+  "offset": [
+   0,
+   0,
+   -0.0553
+  ],
+  "size": [
+   0.9101,
+   0.9,
+   0.7021
+  ],
+  "material": "toon"
+ },
+ "bathtub": {
+  "file": "furniture/bathtub.glb",
+  "category": "furniture",
+  "name": "bath",
+  "license": "CC0 1.0",
+  "author": "Isa Lousberg (Tiny Treats)",
+  "sourceUrl": "https://github.com/TinyTreats-Game-Assets/Tiny-Treats-Bubbly-Bathroom-1.0",
+  "scale": [
+   0.566667,
+   0.566667,
+   0.566667
+  ],
+  "rotation": [
+   0,
+   0,
+   0
+  ],
+  "origin": "feet",
+  "offset": [
+   0,
+   0.0033,
+   0
+  ],
+  "size": [
+   1.1333,
+   0.9111,
+   1.7
+  ],
+  "material": "toon",
+  "nodes": {
+   "water": "bath_water"
+  }
+ },
+ "bed": {
+  "file": "furniture/bed.glb",
+  "category": "furniture",
+  "name": "bed_double_A",
+  "license": "CC0 1.0",
+  "author": "Kay Lousberg (KayKit)",
+  "sourceUrl": "https://github.com/KayKit-Game-Assets/KayKit-Furniture-Bits-1.0",
+  "scale": [
+   0.7,
+   0.7,
+   0.7
+  ],
+  "rotation": [
+   0,
+   0,
+   0
+  ],
+  "origin": "feet",
+  "offset": [
+   0,
+   0,
+   0
+  ],
+  "size": [
+   2.17,
+   0.7,
+   2.1
+  ],
+  "material": "toon"
+ },
+ "bookshelf": {
+  "file": "furniture/bookshelf.glb",
+  "category": "furniture",
+  "name": "bookcaseOpen",
+  "license": "CC0 1.0",
+  "author": "Kenney",
+  "sourceUrl": "https://kenney.nl/assets/furniture-kit",
+  "scale": [
+   2.04545,
+   2.04545,
+   2.04545
+  ],
+  "rotation": [
+   0,
+   0,
+   0
+  ],
+  "origin": "feet",
+  "offset": [
+   -0.4091,
+   0,
+   0.2557
+  ],
+  "size": [
+   0.8182,
+   1.8,
+   0.5114
+  ],
+  "material": "toon",
+  "tint": {
+   "wood": "#c98a58"
+  },
+  "notes": "Empty: fill with book / frame / plantPot props."
+ },
+ "carrier": {
+  "file": "furniture/carrier.glb",
+  "category": "furniture",
+  "name": "picnic_basket_square",
+  "license": "CC0 1.0",
+  "author": "Isa Lousberg (Tiny Treats)",
+  "sourceUrl": "https://tinytreats.itch.io/pleasant-picnic",
+  "scale": [
+   0.408158,
+   0.55831,
+   0.409302
+  ],
+  "rotation": [
+   0,
+   0,
+   0
+  ],
+  "origin": "feet",
+  "offset": [
+   0,
+   0,
+   0
+  ],
+  "size": [
+   0.62,
+   0.38,
+   0.46
+  ],
+  "material": "toon",
+  "nodes": {
+   "lidLeft": "picnic_basket_lid_left",
+   "lidRight": "picnic_basket_lid_right",
+   "handleLeft": "picnic_basket_handle_left",
+   "handleRight": "picnic_basket_handle_right"
+  },
+  "notes": "No free pet carrier exists; a lidded wicker basket (classic cat basket) stands in. Flip the two lid nodes for carrier.closed, wobble the root while a caged cat mashes."
+ },
+ "catTree": {
+  "file": "furniture/catTree.glb",
+  "category": "furniture",
+  "name": "Cat Tree",
+  "license": "CC-BY 3.0",
+  "author": "Pat Siefring",
+  "sourceUrl": "https://poly.pizza/m/daMM0nomcTL",
+  "scale": [
+   0.226702,
+   0.226702,
+   0.226702
+  ],
+  "rotation": [
+   0,
+   0,
+   0
+  ],
+  "origin": "feet",
+  "offset": [
+   0,
+   0,
+   0.0335
+  ],
+  "size": [
+   0.8195,
+   1.5,
+   0.8998
+  ],
+  "material": "toon"
+ },
+ "chair": {
+  "file": "furniture/chair.glb",
+  "category": "furniture",
+  "name": "chair_A_wood",
+  "license": "CC0 1.0",
+  "author": "Kay Lousberg (KayKit)",
+  "sourceUrl": "https://github.com/KayKit-Game-Assets/KayKit-Furniture-Bits-1.0",
+  "scale": [
+   0.715236,
+   0.715236,
+   0.715236
+  ],
+  "rotation": [
+   0,
+   0,
+   0
+  ],
+  "origin": "feet",
+  "offset": [
+   0,
+   0,
+   0.034
+  ],
+  "size": [
+   0.5364,
+   0.9,
+   0.6045
+  ],
+  "material": "toon"
+ },
+ "coatRack": {
+  "file": "furniture/coatRack.glb",
+  "category": "furniture",
+  "name": "Hat Rack",
+  "license": "CC-BY 3.0",
+  "author": "Don Carson",
+  "sourceUrl": "https://poly.pizza/m/6QuAe-X7WG1",
+  "scale": [
+   1.39342,
+   1.39342,
+   1.39342
+  ],
+  "rotation": [
+   0,
+   0,
+   0
+  ],
+  "origin": "feet",
+  "offset": [
+   0.0235,
+   0.7375,
+   -0.0487
+  ],
+  "size": [
+   0.904,
+   1.75,
+   0.8343
+  ],
+  "material": "toon"
+ },
+ "coffeeTable": {
+  "file": "furniture/coffeeTable.glb",
+  "category": "furniture",
+  "name": "table_low",
+  "license": "CC0 1.0",
+  "author": "Kay Lousberg (KayKit)",
+  "sourceUrl": "https://github.com/KayKit-Game-Assets/KayKit-Furniture-Bits-1.0",
+  "scale": [
+   0.5,
+   0.9,
+   0.466667
+  ],
+  "rotation": [
+   0,
+   0,
+   0
+  ],
+  "origin": "feet",
+  "offset": [
+   0,
+   0,
+   0
+  ],
+  "size": [
+   1.2,
+   0.45,
+   0.7
+  ],
+  "material": "toon"
+ },
+ "counter": {
+  "file": "furniture/counter.glb",
+  "category": "furniture",
+  "name": "countertop_straight_A",
+  "license": "CC0 1.0",
+  "author": "Isa Lousberg (Tiny Treats)",
+  "sourceUrl": "https://github.com/TinyTreats-Game-Assets/Tiny-Treats-Charming-Kitchen-1.0",
+  "scale": [
+   0.6,
+   0.92,
+   0.412963
+  ],
+  "rotation": [
+   0,
+   0,
+   0
+  ],
+  "origin": "feet",
+  "offset": [
+   0,
+   0,
+   -0.0003
+  ],
+  "size": [
+   1.2,
+   0.92,
+   0.62
+  ],
+  "material": "toon"
+ },
+ "counterCorner": {
+  "file": "furniture/counterCorner.glb",
+  "category": "furniture",
+  "name": "countertop_corner_inner",
+  "license": "CC0 1.0",
+  "author": "Isa Lousberg (Tiny Treats)",
+  "sourceUrl": "https://github.com/TinyTreats-Game-Assets/Tiny-Treats-Charming-Kitchen-1.0",
+  "scale": [
+   0.6,
+   0.92,
+   0.6
+  ],
+  "rotation": [
+   0,
+   0,
+   0
+  ],
+  "origin": "feet",
+  "offset": [
+   -0.075,
+   0,
+   -0.075
+  ],
+  "size": [
+   1.05,
+   0.92,
+   1.05
+  ],
+  "material": "toon"
+ },
+ "curtains": {
+  "file": "furniture/curtains.glb",
+  "category": "furniture",
+  "name": "Curtains_Double",
+  "license": "CC0 1.0",
+  "author": "Quaternius",
+  "sourceUrl": "https://quaternius.com/packs/ultimatehomeinterior.html",
+  "scale": [
+   0.00529407,
+   0.00529407,
+   0.00529407
+  ],
+  "rotation": [
+   0,
+   0,
+   0
+  ],
+  "origin": "feet",
+  "offset": [
+   -0.0214,
+   0.0031,
+   0.0655
+  ],
+  "size": [
+   1.8364,
+   2.3,
+   0.2523
+  ],
+  "material": "toon",
+  "tint": {
+   "Couch_Blue": "#c8694a",
+   "LightMetal": "#8a6a4a"
+  }
+ },
+ "cuttingBoard": {
+  "file": "furniture/cuttingBoard.glb",
+  "category": "furniture",
+  "name": "cuttingboard",
+  "license": "CC0 1.0",
+  "author": "Isa Lousberg (Tiny Treats)",
+  "sourceUrl": "https://github.com/TinyTreats-Game-Assets/Tiny-Treats-Charming-Kitchen-1.0",
+  "scale": [
+   0.346154,
+   0.346154,
+   0.346154
+  ],
+  "rotation": [
+   0,
+   0,
+   0
+  ],
+  "origin": "feet",
+  "offset": [
+   -0.0519,
+   0,
+   0
+  ],
+  "size": [
+   0.45,
+   0.0346,
+   0.2596
+  ],
+  "material": "toon"
+ },
+ "desk": {
+  "file": "furniture/desk.glb",
+  "category": "furniture",
+  "name": "table_medium_long",
+  "license": "CC0 1.0",
+  "author": "Kay Lousberg (KayKit)",
+  "sourceUrl": "https://github.com/KayKit-Game-Assets/KayKit-Furniture-Bits-1.0",
+  "scale": [
+   0.466667,
+   0.75,
+   0.35
+  ],
+  "rotation": [
+   0,
+   0,
+   0
+  ],
+  "origin": "feet",
+  "offset": [
+   0,
+   0,
+   0
+  ],
+  "size": [
+   1.4,
+   0.75,
+   0.7
+  ],
+  "material": "toon"
+ },
+ "diningTable": {
+  "file": "furniture/diningTable.glb",
+  "category": "furniture",
+  "name": "table_medium",
+  "license": "CC0 1.0",
+  "author": "Kay Lousberg (KayKit)",
+  "sourceUrl": "https://github.com/KayKit-Game-Assets/KayKit-Furniture-Bits-1.0",
+  "scale": [
+   0.6,
+   0.75,
+   0.45
+  ],
+  "rotation": [
+   0,
+   0,
+   0
+  ],
+  "origin": "feet",
+  "offset": [
+   0,
+   0,
+   0
+  ],
+  "size": [
+   1.2,
+   0.75,
+   0.9
+  ],
+  "material": "toon"
+ },
+ "door": {
+  "file": "furniture/door.glb",
+  "category": "furniture",
+  "name": "wall_tiled_doorway (door node only)",
+  "license": "CC0 1.0",
+  "author": "Isa Lousberg (Tiny Treats)",
+  "sourceUrl": "https://github.com/TinyTreats-Game-Assets/Tiny-Treats-Bubbly-Bathroom-1.0",
+  "scale": [
+   0.5625,
+   0.7321,
+   0.25
+  ],
+  "rotation": [
+   0,
+   0,
+   0
+  ],
+  "origin": "feet",
+  "offset": [
+   0,
+   0,
+   0
+  ],
+  "size": [
+   0.9,
+   2.0499,
+   0.185
+  ],
+  "material": "toon",
+  "notes": "Interior door leaf (frame is architecture). Hinge edge at x = -size[0]/2."
+ },
+ "doormat": {
+  "file": "furniture/doormat.glb",
+  "category": "furniture",
+  "name": "doormat",
+  "license": "CC0 1.0",
+  "author": "Isa Lousberg (Tiny Treats)",
+  "sourceUrl": "https://github.com/TinyTreats-Game-Assets/Tiny-Treats-Homely-House-1.0",
+  "scale": [
+   0.75,
+   0.75,
+   0.75
+  ],
+  "rotation": [
+   0,
+   0,
+   0
+  ],
+  "origin": "feet",
+  "offset": [
+   0,
+   0,
+   0
+  ],
+  "size": [
+   0.9,
+   0.075,
+   0.525
+  ],
+  "material": "toon"
+ },
+ "extractorHood": {
+  "file": "furniture/extractorHood.glb",
+  "category": "furniture",
+  "name": "extractor_hood",
+  "license": "CC0 1.0",
+  "author": "Isa Lousberg (Tiny Treats)",
+  "sourceUrl": "https://github.com/TinyTreats-Game-Assets/Tiny-Treats-Charming-Kitchen-1.0",
+  "scale": [
+   0.6,
+   0.6,
+   0.42
+  ],
+  "rotation": [
+   0,
+   0,
+   0
+  ],
+  "origin": "feet",
+  "offset": [
+   0,
+   0.12,
+   -0.336
+  ],
+  "size": [
+   1.2,
+   1.2,
+   0.672
+  ],
+  "material": "toon"
+ },
+ "floorLamp": {
+  "file": "furniture/floorLamp.glb",
+  "category": "furniture",
+  "name": "lamp_standing",
+  "license": "CC0 1.0",
+  "author": "Kay Lousberg (KayKit)",
+  "sourceUrl": "https://github.com/KayKit-Game-Assets/KayKit-Furniture-Bits-1.0",
+  "scale": [
+   0.634921,
+   0.634921,
+   0.634921
+  ],
+  "rotation": [
+   0,
+   0,
+   0
+  ],
+  "origin": "feet",
+  "offset": [
+   0,
+   0,
+   0
+  ],
+  "size": [
+   0.6349,
+   1.6,
+   0.6349
+  ],
+  "material": "toon"
+ },
+ "foodBowl": {
+  "file": "furniture/foodBowl.glb",
+  "category": "furniture",
+  "name": "Dog bowl (full)",
+  "license": "CC-BY 3.0",
+  "author": "Poly by Google",
+  "sourceUrl": "https://poly.pizza/m/eA4LSFu4lj1",
+  "scale": [
+   3.4263e-7,
+   3.4263e-7,
+   3.4263e-7
+  ],
+  "rotation": [
+   0,
+   0,
+   0
+  ],
+  "origin": "feet",
+  "offset": [
+   0.3251,
+   0.0005,
+   -0.2603
+  ],
+  "size": [
+   0.2,
+   0.0415,
+   0.197
+  ],
+  "material": "toon"
+ },
+ "foodBowlEmpty": {
+  "file": "furniture/foodBowlEmpty.glb",
+  "category": "furniture",
+  "name": "Dog bowl (empty)",
+  "license": "CC-BY 3.0",
+  "author": "Poly by Google",
+  "sourceUrl": "https://poly.pizza/m/cMk8S7aDHny",
+  "scale": [
+   0.0530465,
+   0.0530465,
+   0.0530465
+  ],
+  "rotation": [
+   0,
+   0,
+   0
+  ],
+  "origin": "feet",
+  "offset": [
+   0,
+   0.0293,
+   0
+  ],
+  "size": [
+   0.2,
+   0.0535,
+   0.2
+  ],
+  "material": "toon"
+ },
+ "fridge": {
+  "file": "furniture/fridge.glb",
+  "category": "furniture",
+  "name": "fridge",
+  "license": "CC0 1.0",
+  "author": "Isa Lousberg (Tiny Treats)",
+  "sourceUrl": "https://github.com/TinyTreats-Game-Assets/Tiny-Treats-Charming-Kitchen-1.0",
+  "scale": [
+   0.45,
+   0.6167,
+   0.42
+  ],
+  "rotation": [
+   0,
+   0,
+   0
+  ],
+  "origin": "feet",
+  "offset": [
+   -0.009,
+   0,
+   -0.1294
+  ],
+  "size": [
+   0.918,
+   1.8501,
+   0.6789
+  ],
+  "material": "toon",
+  "nodes": {
+   "doorTop": "fridge_door_top",
+   "doorBottom": "fridge_door_bottom"
+  }
+ },
+ "frontDoor": {
+  "file": "furniture/frontDoor.glb",
+  "category": "furniture",
+  "name": "Door_8",
+  "license": "CC0 1.0",
+  "author": "Quaternius",
+  "sourceUrl": "https://quaternius.com/packs/ultimatehomeinterior.html",
+  "scale": [
+   0.00488368,
+   0.00488368,
+   0.00488368
+  ],
+  "rotation": [
+   0,
+   0,
+   0
+  ],
+  "origin": "feet",
+  "offset": [
+   0.4248,
+   0,
+   -0.0017
+  ],
+  "size": [
+   0.8497,
+   2.05,
+   0.2161
+  ],
+  "material": "toon",
+  "tint": {
+   "Wood": "#8a4f2e",
+   "Metal": "#c9a35a"
+  },
+  "notes": "Door leaf only. Hinge edge at x = +size[0]/2."
+ },
+ "fuseBox": {
+  "file": "furniture/fuseBox.glb",
+  "category": "furniture",
+  "name": "Fuse Box",
+  "license": "CC-BY 3.0",
+  "author": "zeoxo",
+  "sourceUrl": "https://poly.pizza/m/dCzy46eI_IT",
+  "scale": [
+   0.357143,
+   0.357143,
+   0.357143
+  ],
+  "rotation": [
+   0,
+   180,
+   0
+  ],
+  "origin": "feet",
+  "offset": [
+   0.0504,
+   0.1554,
+   0.0022
+  ],
+  "size": [
+   0.425,
+   0.5,
+   0.0672
+  ],
+  "material": "toon"
+ },
+ "kitchenSink": {
+  "file": "furniture/kitchenSink.glb",
+  "category": "furniture",
+  "name": "countertop_sink",
+  "license": "CC0 1.0",
+  "author": "Isa Lousberg (Tiny Treats)",
+  "sourceUrl": "https://github.com/TinyTreats-Game-Assets/Tiny-Treats-Charming-Kitchen-1.0",
+  "scale": [
+   0.6,
+   0.92,
+   0.4133
+  ],
+  "rotation": [
+   0,
+   0,
+   0
+  ],
+  "origin": "feet",
+  "offset": [
+   0,
+   0,
+   -0.0003
+  ],
+  "size": [
+   1.2,
+   1.6172,
+   0.6205
+  ],
+  "material": "toon"
+ },
+ "laptop": {
+  "file": "furniture/laptop.glb",
+  "category": "furniture",
+  "name": "Laptop",
+  "license": "CC-BY 3.0",
+  "author": "J-Toastie",
+  "sourceUrl": "https://poly.pizza/m/UGOWjMUC5U",
+  "scale": [
+   0.245022,
+   0.245022,
+   0.245022
+  ],
+  "rotation": [
+   0,
+   -90,
+   0
+  ],
+  "origin": "feet",
+  "offset": [
+   -0.0064,
+   -0.0011,
+   0.0499
+  ],
+  "size": [
+   0.34,
+   0.2294,
+   0.2466
+  ],
+  "material": "toon",
+  "notes": "Screen material is `Screen` (near black): put the laptop.screen canvas texture on it or on a plane in front."
+ },
+ "laundryBasket": {
+  "file": "furniture/laundryBasket.glb",
+  "category": "furniture",
+  "name": "picnic_basket_round",
+  "license": "CC0 1.0",
+  "author": "Isa Lousberg (Tiny Treats)",
+  "sourceUrl": "https://tinytreats.itch.io/pleasant-picnic",
+  "scale": [
+   0.435379,
+   0.435379,
+   0.435379
+  ],
+  "rotation": [
+   0,
+   0,
+   0
+  ],
+  "origin": "feet",
+  "offset": [
+   0,
+   0,
+   0
+  ],
+  "size": [
+   0.5277,
+   0.45,
+   0.4093
+  ],
+  "material": "toon",
+  "notes": "Wicker basket used as the laundry basket (laundry spot)."
+ },
+ "litterBox": {
+  "file": "furniture/litterBox.glb",
+  "category": "furniture",
+  "name": "Container Bag Open",
+  "license": "CC0 1.0",
+  "author": "MilkAndBanana",
+  "sourceUrl": "https://poly.pizza/m/WytMSfw8xI",
+  "scale": [
+   0.0220232,
+   0.0220232,
+   0.0220232
+  ],
+  "rotation": [
+   0,
+   0,
+   0
+  ],
+  "origin": "feet",
+  "offset": [
+   0,
+   0.0793,
+   0
+  ],
+  "size": [
+   0.5,
+   0.1586,
+   0.4325
+  ],
+  "material": "toon",
+  "notes": "Open plastic tray recolored to mint with sand-colored litter. Put poop models on the fill for litter.fill."
+ },
+ "mirror": {
+  "file": "furniture/mirror.glb",
+  "category": "furniture",
+  "name": "mirror",
+  "license": "CC0 1.0",
+  "author": "Isa Lousberg (Tiny Treats)",
+  "sourceUrl": "https://github.com/TinyTreats-Game-Assets/Tiny-Treats-Bubbly-Bathroom-1.0",
+  "scale": [
+   0.466667,
+   0.466667,
+   0.466667
+  ],
+  "rotation": [
+   0,
+   0,
+   0
+  ],
+  "origin": "feet",
+  "offset": [
+   0,
+   0.35,
+   -0.0233
+  ],
+  "size": [
+   0.588,
+   0.7,
+   0.0467
+  ],
+  "material": "toon"
+ },
+ "nightstand": {
+  "file": "furniture/nightstand.glb",
+  "category": "furniture",
+  "name": "cabinet_small",
+  "license": "CC0 1.0",
+  "author": "Kay Lousberg (KayKit)",
+  "sourceUrl": "https://github.com/KayKit-Game-Assets/KayKit-Furniture-Bits-1.0",
+  "scale": [
+   0.55,
+   0.55,
+   0.55
+  ],
+  "rotation": [
+   0,
+   0,
+   0
+  ],
+  "origin": "feet",
+  "offset": [
+   0,
+   0,
+   -0.0004
+  ],
+  "size": [
+   0.55,
+   0.55,
+   0.5509
+  ],
+  "material": "toon"
+ },
+ "officeChair": {
+  "file": "furniture/officeChair.glb",
+  "category": "furniture",
+  "name": "chairDesk",
+  "license": "CC0 1.0",
+  "author": "Kenney",
+  "sourceUrl": "https://kenney.nl/assets/furniture-kit",
+  "scale": [
+   1.64582,
+   1.64582,
+   1.64582
+  ],
+  "rotation": [
+   0,
+   0,
+   0
+  ],
+  "origin": "feet",
+  "offset": [
+   -0.2756,
+   0,
+   0.2586
+  ],
+  "size": [
+   0.5513,
+   1,
+   0.5173
+  ],
+  "material": "toon"
+ },
+ "plant": {
+  "file": "furniture/plant.glb",
+  "category": "furniture",
+  "name": "monstera_plant_large_potted",
+  "license": "CC0 1.0",
+  "author": "Isa Lousberg (Tiny Treats)",
+  "sourceUrl": "https://tinytreats.itch.io/house-plants",
+  "scale": [
+   0.353237,
+   0.353237,
+   0.353237
+  ],
+  "rotation": [
+   0,
+   0,
+   0
+  ],
+  "origin": "feet",
+  "offset": [
+   0.0358,
+   0,
+   0.0298
+  ],
+  "size": [
+   0.9157,
+   1.3,
+   0.9856
+  ],
+  "material": "toon"
+ },
+ "plantSmall": {
+  "file": "furniture/plantSmall.glb",
+  "category": "furniture",
+  "name": "sansevieria_plant_medium_potted",
+  "license": "CC0 1.0",
+  "author": "Isa Lousberg (Tiny Treats)",
+  "sourceUrl": "https://tinytreats.itch.io/house-plants",
+  "scale": [
+   0.267422,
+   0.267422,
+   0.267422
+  ],
+  "rotation": [
+   0,
+   0,
+   0
+  ],
+  "origin": "feet",
+  "offset": [
+   0.0038,
+   -0.0002,
+   0
+  ],
+  "size": [
+   0.3229,
+   0.6,
+   0.2606
+  ],
+  "material": "toon"
+ },
+ "plantTall": {
+  "file": "furniture/plantTall.glb",
+  "category": "furniture",
+  "name": "yucca_plant_large_potted",
+  "license": "CC0 1.0",
+  "author": "Isa Lousberg (Tiny Treats)",
+  "sourceUrl": "https://tinytreats.itch.io/house-plants",
+  "scale": [
+   0.500454,
+   0.500454,
+   0.500454
+  ],
+  "rotation": [
+   0,
+   0,
+   0
+  ],
+  "origin": "feet",
+  "offset": [
+   -0.0732,
+   0,
+   0.0477
+  ],
+  "size": [
+   1.0161,
+   1.5,
+   0.8558
+  ],
+  "material": "toon"
+ },
+ "rug": {
+  "file": "furniture/rug.glb",
+  "category": "furniture",
+  "name": "rug_rectangle_stripes_A",
+  "license": "CC0 1.0",
+  "author": "Kay Lousberg (KayKit)",
+  "sourceUrl": "https://github.com/KayKit-Game-Assets/KayKit-Furniture-Bits-1.0",
+  "scale": [
+   0.866667,
+   0.3,
+   0.9
+  ],
+  "rotation": [
+   0,
+   0,
+   0
+  ],
+  "origin": "feet",
+  "offset": [
+   0,
+   0,
+   0
+  ],
+  "size": [
+   2.6,
+   0.03,
+   1.8
+  ],
+  "material": "toon"
+ },
+ "rugRound": {
+  "file": "furniture/rugRound.glb",
+  "category": "furniture",
+  "name": "rug_oval_A",
+  "license": "CC0 1.0",
+  "author": "Kay Lousberg (KayKit)",
+  "sourceUrl": "https://github.com/KayKit-Game-Assets/KayKit-Furniture-Bits-1.0",
+  "scale": [
+   0.666667,
+   0.3,
+   0.7
+  ],
+  "rotation": [
+   0,
+   0,
+   0
+  ],
+  "origin": "feet",
+  "offset": [
+   0,
+   0,
+   0
+  ],
+  "size": [
+   2,
+   0.03,
+   1.4
+  ],
+  "material": "toon"
+ },
+ "shelf": {
+  "file": "furniture/shelf.glb",
+  "category": "furniture",
+  "name": "shelf_A_big",
+  "license": "CC0 1.0",
+  "author": "Kay Lousberg (KayKit)",
+  "sourceUrl": "https://github.com/KayKit-Game-Assets/KayKit-Furniture-Bits-1.0",
+  "scale": [
+   0.6,
+   0.6,
+   0.6
+  ],
+  "rotation": [
+   0,
+   0,
+   0
+  ],
+  "origin": "feet",
+  "offset": [
+   0,
+   0.18,
+   -0.15
+  ],
+  "size": [
+   1.2,
+   0.24,
+   0.3
+  ],
+  "material": "toon"
+ },
+ "shoeRack": {
+  "file": "furniture/shoeRack.glb",
+  "category": "furniture",
+  "name": "Little Bookcase",
+  "license": "CC-BY 3.0",
+  "author": "Don Carson",
+  "sourceUrl": "https://poly.pizza/m/74tXfxoDB9b",
+  "scale": [
+   0.554392,
+   0.554392,
+   0.554392
+  ],
+  "rotation": [
+   0,
+   180,
+   0
+  ],
+  "origin": "feet",
+  "offset": [
+   0.0092,
+   0.2874,
+   0.0169
+  ],
+  "size": [
+   0.6098,
+   0.8,
+   0.2481
+  ],
+  "material": "toon"
+ },
+ "sideTable": {
+  "file": "furniture/sideTable.glb",
+  "category": "furniture",
+  "name": "table_small",
+  "license": "CC0 1.0",
+  "author": "Kay Lousberg (KayKit)",
+  "sourceUrl": "https://github.com/KayKit-Game-Assets/KayKit-Furniture-Bits-1.0",
+  "scale": [
+   0.5,
+   0.6,
+   0.5
+  ],
+  "rotation": [
+   0,
+   0,
+   0
+  ],
+  "origin": "feet",
+  "offset": [
+   0,
+   0,
+   0
+  ],
+  "size": [
+   0.5,
+   0.6,
+   0.5
+  ],
+  "material": "toon"
+ },
+ "sofa": {
+  "file": "furniture/sofa.glb",
+  "category": "furniture",
+  "name": "couch_pillows",
+  "license": "CC0 1.0",
+  "author": "Kay Lousberg (KayKit)",
+  "sourceUrl": "https://github.com/KayKit-Game-Assets/KayKit-Furniture-Bits-1.0",
+  "scale": [
+   0.666667,
+   0.666667,
+   0.666667
+  ],
+  "rotation": [
+   0,
+   0,
+   0
+  ],
+  "origin": "feet",
+  "offset": [
+   0,
+   0,
+   -0.0333
+  ],
+  "size": [
+   2,
+   0.816,
+   1.0667
+  ],
+  "material": "toon"
+ },
+ "stove": {
+  "file": "furniture/stove.glb",
+  "category": "furniture",
+  "name": "stove",
+  "license": "CC0 1.0",
+  "author": "Isa Lousberg (Tiny Treats)",
+  "sourceUrl": "https://github.com/TinyTreats-Game-Assets/Tiny-Treats-Charming-Kitchen-1.0",
+  "scale": [
+   0.6,
+   0.92,
+   0.4133
+  ],
+  "rotation": [
+   0,
+   0,
+   0
+  ],
+  "origin": "feet",
+  "offset": [
+   0,
+   0,
+   -0.0364
+  ],
+  "size": [
+   1.2,
+   1.196,
+   0.6928
+  ],
+  "material": "toon",
+  "nodes": {
+   "door": "stove_door"
+  }
+ },
+ "toilet": {
+  "file": "furniture/toilet.glb",
+  "category": "furniture",
+  "name": "Bathroom_Toilet",
+  "license": "CC0 1.0",
+  "author": "Quaternius",
+  "sourceUrl": "https://quaternius.com/packs/ultimatehomeinterior.html",
+  "scale": [
+   0.00420904,
+   0.00420904,
+   0.00420904
+  ],
+  "rotation": [
+   0,
+   0,
+   0
+  ],
+  "origin": "feet",
+  "offset": [
+   0,
+   0.0055,
+   0.0227
+  ],
+  "size": [
+   0.5037,
+   0.8,
+   0.7119
+  ],
+  "material": "toon",
+  "tint": {
+   "White": "#f7f3ec"
+  }
+ },
+ "tpHolder": {
+  "file": "furniture/tpHolder.glb",
+  "category": "furniture",
+  "name": "Bathroom_ToiletPaper",
+  "license": "CC0 1.0",
+  "author": "Quaternius",
+  "sourceUrl": "https://quaternius.com/packs/ultimatehomeinterior.html",
+  "scale": [
+   0.00533438,
+   0.00533438,
+   0.00533438
+  ],
+  "rotation": [
+   0,
+   0,
+   0
+  ],
+  "origin": "feet",
+  "offset": [
+   0.0084,
+   0.0524,
+   0
+  ],
+  "size": [
+   0.16,
+   0.1837,
+   0.0933
+  ],
+  "material": "toon",
+  "tint": {
+   "White": "#ffffff",
+   "Brown": "#b9773f",
+   "LightMetal": "#c8c8c8"
+  }
+ },
+ "tv": {
+  "file": "furniture/tv.glb",
+  "category": "furniture",
+  "name": "Retro TV",
+  "license": "CC-BY 3.0",
+  "author": "Alex Safayan",
+  "sourceUrl": "https://poly.pizza/m/2tfjTOK1Lh4",
+  "scale": [
+   0.807561,
+   0.807561,
+   0.807561
+  ],
+  "rotation": [
+   0,
+   0,
+   0
+  ],
+  "origin": "feet",
+  "offset": [
+   -0.1048,
+   0.2477,
+   -0.1398
+  ],
+  "size": [
+   0.75,
+   0.9047,
+   0.4739
+  ],
+  "material": "toon",
+  "notes": "Tabletop CRT with antennas. Screen is material `mat23` (near black, no UVs): put a UV-mapped plane with the Cat TV texture just in front of it."
+ },
+ "tvStand": {
+  "file": "furniture/tvStand.glb",
+  "category": "furniture",
+  "name": "cabinet_medium",
+  "license": "CC0 1.0",
+  "author": "Kay Lousberg (KayKit)",
+  "sourceUrl": "https://github.com/KayKit-Game-Assets/KayKit-Furniture-Bits-1.0",
+  "scale": [
+   0.65,
+   0.55,
+   0.499222
+  ],
+  "rotation": [
+   0,
+   0,
+   0
+  ],
+  "origin": "feet",
+  "offset": [
+   0,
+   0,
+   -0.0004
+  ],
+  "size": [
+   1.3,
+   0.55,
+   0.5
+  ],
+  "material": "toon"
+ },
+ "wallCabinet": {
+  "file": "furniture/wallCabinet.glb",
+  "category": "furniture",
+  "name": "wall_cabinet_straight",
+  "license": "CC0 1.0",
+  "author": "Isa Lousberg (Tiny Treats)",
+  "sourceUrl": "https://github.com/TinyTreats-Game-Assets/Tiny-Treats-Charming-Kitchen-1.0",
+  "scale": [
+   0.6,
+   0.6,
+   0.4
+  ],
+  "rotation": [
+   0,
+   0,
+   0
+  ],
+  "origin": "feet",
+  "offset": [
+   0,
+   0,
+   -0.2
+  ],
+  "size": [
+   1.2,
+   0.6,
+   0.4
+  ],
+  "material": "toon"
+ },
+ "wallFrame": {
+  "file": "furniture/wallFrame.glb",
+  "category": "furniture",
+  "name": "pictureframe_large_A",
+  "license": "CC0 1.0",
+  "author": "Kay Lousberg (KayKit)",
+  "sourceUrl": "https://github.com/KayKit-Game-Assets/KayKit-Furniture-Bits-1.0",
+  "scale": [
+   0.5,
+   0.5,
+   0.5
+  ],
+  "rotation": [
+   0,
+   0,
+   0
+  ],
+  "origin": "feet",
+  "offset": [
+   -0.0025,
+   0.3,
+   -0.05
+  ],
+  "size": [
+   0.505,
+   0.6,
+   0.1
+  ],
+  "material": "toon"
+ },
+ "wallShelf": {
+  "file": "furniture/wallShelf.glb",
+  "category": "furniture",
+  "name": "shelf_B_large_decorated",
+  "license": "CC0 1.0",
+  "author": "Kay Lousberg (KayKit)",
+  "sourceUrl": "https://github.com/KayKit-Game-Assets/KayKit-Furniture-Bits-1.0",
+  "scale": [
+   0.6,
+   0.6,
+   0.6
+  ],
+  "rotation": [
+   0,
+   0,
+   0
+  ],
+  "origin": "feet",
+  "offset": [
+   0,
+   0.06,
+   -0.15
+  ],
+  "size": [
+   1.2,
+   0.4905,
+   0.3
+  ],
+  "material": "toon"
+ },
+ "wardrobe": {
+  "file": "furniture/wardrobe.glb",
+  "category": "furniture",
+  "name": "bookcaseClosedDoors",
+  "license": "CC0 1.0",
+  "author": "Kenney",
+  "sourceUrl": "https://kenney.nl/assets/furniture-kit",
+  "scale": [
+   2.29412,
+   2.29412,
+   2.29412
+  ],
+  "rotation": [
+   0,
+   0,
+   0
+  ],
+  "origin": "feet",
+  "offset": [
+   -0.4588,
+   0,
+   0.2868
+  ],
+  "size": [
+   0.9176,
+   1.95,
+   0.5735
+  ],
+  "material": "toon",
+  "tint": {
+   "wood": "#c98a58",
+   "metal": "#e0c27a"
+  }
+ },
+ "washer": {
+  "file": "furniture/washer.glb",
+  "category": "furniture",
+  "name": "Bathroom_WashingMachine",
+  "license": "CC0 1.0",
+  "author": "Quaternius",
+  "sourceUrl": "https://quaternius.com/packs/ultimatehomeinterior.html",
+  "scale": [
+   0.00578154,
+   0.00578154,
+   0.00578154
+  ],
+  "rotation": [
+   0,
+   0,
+   0
+  ],
+  "origin": "feet",
+  "offset": [
+   0,
+   0,
+   -0.0256
+  ],
+  "size": [
+   0.7469,
+   0.85,
+   0.7653
+  ],
+  "material": "toon",
+  "tint": {
+   "White": "#f4f0e8",
+   "Grey": "#b9c3c9"
+  }
+ },
+ "window": {
+  "file": "furniture/window.glb",
+  "category": "furniture",
+  "name": "Window_Large1",
+  "license": "CC0 1.0",
+  "author": "Quaternius",
+  "sourceUrl": "https://quaternius.com/packs/ultimatehomeinterior.html",
+  "scale": [
+   0.00873158,
+   0.00873158,
+   0.00873158
+  ],
+  "rotation": [
+   0,
+   0,
+   0
+  ],
+  "origin": "feet",
+  "offset": [
+   0,
+   0,
+   0
+  ],
+  "size": [
+   1.6,
+   1.483,
+   0.1232
+  ],
+  "material": "toon",
+  "tint": {
+   "White": "#fbf7ef"
+  }
+ },
+ "fish": {
+  "file": "mess/fish.glb",
+  "category": "mess",
+  "name": "Fish",
+  "license": "CC0 1.0",
+  "author": "Quaternius",
+  "sourceUrl": "https://poly.pizza/m/XWl86YFtpF",
+  "scale": [
+   0.0325672,
+   0.0325672,
+   0.0325672
+  ],
+  "rotation": [
+   0,
+   0,
+   90
+  ],
+  "origin": "feet",
+  "offset": [
+   0.0044,
+   0.0188,
+   0.0315
+  ],
+  "size": [
+   0.0868,
+   0.0376,
+   0.26
+  ],
+  "material": "toon",
+  "clips": {
+   "swim": "Armature|Swim"
+  },
+  "notes": "Rotated onto its side for flopping: play the swim clip fast. Also good for tank fish (rotation [0,0,0])."
+ },
+ "poop": {
+  "file": "mess/poop.glb",
+  "category": "mess",
+  "name": "Scary Poop",
+  "license": "CC0 1.0",
+  "author": "hat_my_guy",
+  "sourceUrl": "https://poly.pizza/m/uVFt6LRcYU",
+  "scale": [
+   0.0527045,
+   0.0527045,
+   0.0527045
+  ],
+  "rotation": [
+   0,
+   0,
+   0
+  ],
+  "origin": "feet",
+  "offset": [
+   -0.0002,
+   0.0184,
+   0
+  ],
+  "size": [
+   0.13,
+   0.0927,
+   0.1312
+  ],
+  "material": "toon"
+ },
+ "shards": {
+  "file": "mess/shards.glb",
+  "category": "mess",
+  "name": "plate-broken",
+  "license": "CC0 1.0",
+  "author": "Kenney",
+  "sourceUrl": "https://kenney.nl/assets/food-kit",
+  "scale": [
+   0.336408,
+   0.336408,
+   0.336408
+  ],
+  "rotation": [
+   0,
+   0,
+   0
+  ],
+  "origin": "feet",
+  "offset": [
+   0,
+   0,
+   0
+  ],
+  "size": [
+   0.3,
+   0.0303,
+   0.3
+  ],
+  "material": "toon"
+ },
+ "tp": {
+  "file": "mess/tp.glb",
+  "category": "mess",
+  "name": "TIME HOTEL Rock Forms 5 (White)",
+  "license": "CC-BY 3.0",
+  "author": "S. Paul Michael",
+  "sourceUrl": "https://poly.pizza/m/28cOcmtim4L",
+  "scale": [
+   2.62727,
+   2.62727,
+   2.62727
+  ],
+  "rotation": [
+   0,
+   0,
+   0
+  ],
+  "origin": "feet",
+  "offset": [
+   0,
+   0.1248,
+   0
+  ],
+  "size": [
+   0.45,
+   0.2496,
+   0.3716
+  ],
+  "material": "toon",
+  "notes": "Crumpled white heap read as unrolled toilet paper."
+ },
+ "book": {
+  "file": "props/book.glb",
+  "category": "props",
+  "name": "book_single",
+  "license": "CC0 1.0",
+  "author": "Kay Lousberg (KayKit)",
+  "sourceUrl": "https://github.com/KayKit-Game-Assets/KayKit-Furniture-Bits-1.0",
+  "scale": [
+   0.410959,
+   0.4,
+   0.192308
+  ],
+  "rotation": [
+   0,
+   90,
+   0
+  ],
+  "origin": "center",
+  "offset": [
+   -0.0021,
+   0,
+   0
+  ],
+  "size": [
+   0.15,
+   0.2,
+   0.05
+  ],
+  "material": "toon",
+  "collider": [
+   0.15,
+   0.2,
+   0.04
+  ]
+ },
+ "bowl": {
+  "file": "props/bowl.glb",
+  "category": "props",
+  "name": "bowl",
+  "license": "CC0 1.0",
+  "author": "Isa Lousberg (Tiny Treats)",
+  "sourceUrl": "https://tinytreats.itch.io/pleasant-picnic",
+  "scale": [
+   0.4,
+   0.4,
+   0.4
+  ],
+  "rotation": [
+   0,
+   0,
+   0
+  ],
+  "origin": "center",
+  "offset": [
+   0,
+   -0.0412,
+   0
+  ],
+  "size": [
+   0.16,
+   0.0823,
+   0.16
+  ],
+  "material": "toon",
+  "collider": [
+   0.16,
+   0.07,
+   0.16
+  ]
+ },
+ "candle": {
+  "file": "props/candle.glb",
+  "category": "props",
+  "name": "candle",
+  "license": "CC0 1.0",
+  "author": "Isa Lousberg (Tiny Treats)",
+  "sourceUrl": "https://github.com/TinyTreats-Game-Assets/Tiny-Treats-Bubbly-Bathroom-1.0",
+  "scale": [
+   0.324164,
+   0.324164,
+   0.324164
+  ],
+  "rotation": [
+   0,
+   0,
+   0
+  ],
+  "origin": "center",
+  "offset": [
+   0,
+   -0.06,
+   0
+  ],
+  "size": [
+   0.0934,
+   0.12,
+   0.0934
+  ],
+  "material": "toon",
+  "collider": [
+   0.06,
+   0.12,
+   0.06
+  ]
+ },
+ "cerealBox": {
+  "file": "props/cerealBox.glb",
+  "category": "props",
+  "name": "TIME HOTEL 3.28",
+  "license": "CC-BY 3.0",
+  "author": "S. Paul Michael",
+  "sourceUrl": "https://poly.pizza/m/8McuTnDFC-Z",
+  "scale": [
+   0.134226,
+   0.111739,
+   0.149731
+  ],
+  "rotation": [
+   0,
+   0,
+   0
+  ],
+  "origin": "center",
+  "offset": [
+   -0.0001,
+   0.0341,
+   0.0288
+  ],
+  "size": [
+   0.2,
+   0.3,
+   0.07
+  ],
+  "material": "toon",
+  "collider": [
+   0.2,
+   0.3,
+   0.07
+  ]
+ },
+ "cucumber": {
+  "file": "props/cucumber.glb",
+  "category": "props",
+  "name": "Cucumber",
+  "license": "CC0 1.0",
+  "author": "Quaternius",
+  "sourceUrl": "https://poly.pizza/m/nyGEAKs590",
+  "scale": [
+   0.121647,
+   0.121647,
+   0.121647
+  ],
+  "rotation": [
+   0,
+   90,
+   0
+  ],
+  "origin": "center",
+  "offset": [
+   0.0004,
+   0.0011,
+   0.0004
+  ],
+  "size": [
+   0.0391,
+   0.0394,
+   0.2
+  ],
+  "material": "toon",
+  "collider": [
+   0.05,
+   0.05,
+   0.2
+  ]
+ },
+ "frame": {
+  "file": "props/frame.glb",
+  "category": "props",
+  "name": "pictureframe_standing_A",
+  "license": "CC0 1.0",
+  "author": "Kay Lousberg (KayKit)",
+  "sourceUrl": "https://github.com/KayKit-Game-Assets/KayKit-Furniture-Bits-1.0",
+  "scale": [
+   0.420345,
+   0.420345,
+   0.420345
+  ],
+  "rotation": [
+   0,
+   0,
+   0
+  ],
+  "origin": "center",
+  "offset": [
+   0,
+   -0.1296,
+   0.0078
+  ],
+  "size": [
+   0.2102,
+   0.26,
+   0.1595
+  ],
+  "material": "toon",
+  "collider": [
+   0.2,
+   0.26,
+   0.03
+  ]
+ },
+ "glass": {
+  "file": "props/glass.glb",
+  "category": "props",
+  "name": "wine_glass",
+  "license": "CC0 1.0",
+  "author": "Isa Lousberg (Tiny Treats)",
+  "sourceUrl": "https://tinytreats.itch.io/pleasant-picnic",
+  "scale": [
+   0.288889,
+   0.288889,
+   0.288889
+  ],
+  "rotation": [
+   0,
+   0,
+   0
+  ],
+  "origin": "center",
+  "offset": [
+   0,
+   -0.065,
+   0
+  ],
+  "size": [
+   0.1156,
+   0.13,
+   0.1156
+  ],
+  "material": "toon",
+  "collider": [
+   0.07,
+   0.13,
+   0.07
+  ]
+ },
+ "lamp": {
+  "file": "props/lamp.glb",
+  "category": "props",
+  "name": "Lamp With Shade",
+  "license": "CC0 1.0",
+  "author": "CreativeTrio",
+  "sourceUrl": "https://poly.pizza/m/1nKtMmYxLT",
+  "scale": [
+   1.23104,
+   1.23104,
+   1.23104
+  ],
+  "rotation": [
+   0,
+   0,
+   0
+  ],
+  "origin": "center",
+  "offset": [
+   0,
+   -0.2,
+   0
+  ],
+  "size": [
+   0.1932,
+   0.4,
+   0.1932
+  ],
+  "material": "toon",
+  "collider": [
+   0.16,
+   0.4,
+   0.16
+  ]
+ },
+ "mug": {
+  "file": "props/mug.glb",
+  "category": "props",
+  "name": "mug_red",
+  "license": "CC0 1.0",
+  "author": "Isa Lousberg (Tiny Treats)",
+  "sourceUrl": "https://github.com/TinyTreats-Game-Assets/Tiny-Treats-Charming-Kitchen-1.0",
+  "scale": [
+   0.285714,
+   0.285714,
+   0.285714
+  ],
+  "rotation": [
+   0,
+   0,
+   0
+  ],
+  "origin": "center",
+  "offset": [
+   -0.0199,
+   -0.05,
+   0
+  ],
+  "size": [
+   0.1463,
+   0.1,
+   0.1071
+  ],
+  "material": "toon",
+  "collider": [
+   0.09,
+   0.1,
+   0.09
+  ]
+ },
+ "package": {
+  "file": "props/package.glb",
+  "category": "props",
+  "name": "package",
+  "license": "CC0 1.0",
+  "author": "Isa Lousberg (Tiny Treats)",
+  "sourceUrl": "https://github.com/TinyTreats-Game-Assets/Tiny-Treats-Homely-House-1.0",
+  "scale": [
+   0.5,
+   0.8,
+   0.5
+  ],
+  "rotation": [
+   0,
+   0,
+   0
+  ],
+  "origin": "center",
+  "offset": [
+   0.0012,
+   -0.2,
+   -0.0012
+  ],
+  "size": [
+   0.5,
+   0.4,
+   0.4
+  ],
+  "material": "toon",
+  "collider": [
+   0.5,
+   0.4,
+   0.4
+  ]
+ },
+ "phone": {
+  "file": "props/phone.glb",
+  "category": "props",
+  "name": "Phone",
+  "license": "CC0 1.0",
+  "author": "Quaternius",
+  "sourceUrl": "https://poly.pizza/m/k2kgBepoMU",
+  "scale": [
+   0.165115,
+   0.165115,
+   0.165115
+  ],
+  "rotation": [
+   -90,
+   0,
+   0
+  ],
+  "origin": "center",
+  "offset": [
+   -0.0005,
+   -0.0002,
+   -0.0001
+  ],
+  "size": [
+   0.07,
+   0.01,
+   0.15
+  ],
+  "material": "toon",
+  "collider": [
+   0.07,
+   0.01,
+   0.15
+  ]
+ },
+ "pillow": {
+  "file": "props/pillow.glb",
+  "category": "props",
+  "name": "pillow_A",
+  "license": "CC0 1.0",
+  "author": "Kay Lousberg (KayKit)",
+  "sourceUrl": "https://github.com/KayKit-Game-Assets/KayKit-Furniture-Bits-1.0",
+  "scale": [
+   0.923077,
+   0.923077,
+   0.923077
+  ],
+  "rotation": [
+   0,
+   0,
+   0
+  ],
+  "origin": "center",
+  "offset": [
+   0,
+   0,
+   0
+  ],
+  "size": [
+   0.6,
+   0.1846,
+   0.4615
+  ],
+  "material": "toon",
+  "collider": [
+   0.6,
+   0.14,
+   0.4
+  ]
+ },
+ "plantPot": {
+  "file": "props/plantPot.glb",
+  "category": "props",
+  "name": "pothos_plant_small_potted",
+  "license": "CC0 1.0",
+  "author": "Isa Lousberg (Tiny Treats)",
+  "sourceUrl": "https://tinytreats.itch.io/house-plants",
+  "scale": [
+   0.177812,
+   0.177812,
+   0.177812
+  ],
+  "rotation": [
+   0,
+   0,
+   0
+  ],
+  "origin": "center",
+  "offset": [
+   0.0202,
+   -0.0512,
+   -0.0168
+  ],
+  "size": [
+   0.1282,
+   0.18,
+   0.1215
+  ],
+  "material": "toon",
+  "collider": [
+   0.14,
+   0.18,
+   0.14
+  ]
+ },
+ "plate": {
+  "file": "props/plate.glb",
+  "category": "props",
+  "name": "plate",
+  "license": "CC0 1.0",
+  "author": "Isa Lousberg (Tiny Treats)",
+  "sourceUrl": "https://github.com/TinyTreats-Game-Assets/Tiny-Treats-Charming-Kitchen-1.0",
+  "scale": [
+   0.293333,
+   0.293333,
+   0.293333
+  ],
+  "rotation": [
+   0,
+   0,
+   0
+  ],
+  "origin": "center",
+  "offset": [
+   0,
+   -0.0147,
+   0
+  ],
+  "size": [
+   0.22,
+   0.0293,
+   0.22
+  ],
+  "material": "toon",
+  "collider": [
+   0.22,
+   0.024,
+   0.22
+  ]
+ },
+ "remote": {
+  "file": "props/remote.glb",
+  "category": "props",
+  "name": "TIME HOTEL 2.22",
+  "license": "CC-BY 3.0",
+  "author": "S. Paul Michael",
+  "sourceUrl": "https://poly.pizza/m/11SpVcTGeWH",
+  "scale": [
+   0.0191388,
+   0.0191388,
+   0.0191388
+  ],
+  "rotation": [
+   -90,
+   0,
+   0
+  ],
+  "origin": "center",
+  "offset": [
+   -0.0019,
+   0.0088,
+   -0.0219
+  ],
+  "size": [
+   0.0651,
+   0.0199,
+   0.16
+  ],
+  "material": "toon",
+  "collider": [
+   0.05,
+   0.02,
+   0.16
+  ]
+ },
+ "salmon": {
+  "file": "props/salmon.glb",
+  "category": "props",
+  "name": "Salmon",
+  "license": "CC0 1.0",
+  "author": "Quaternius",
+  "sourceUrl": "https://poly.pizza/m/2BeZAlQ73h",
+  "scale": [
+   0.418236,
+   0.418236,
+   0.418236
+  ],
+  "rotation": [
+   0,
+   0,
+   0
+  ],
+  "origin": "center",
+  "offset": [
+   0.027,
+   -0.0685,
+   0.0163
+  ],
+  "size": [
+   0.277,
+   0.117,
+   0.36
+  ],
+  "material": "toon",
+  "collider": [
+   0.14,
+   0.06,
+   0.36
+  ]
+ },
+ "shoe": {
+  "file": "props/shoe.glb",
+  "category": "props",
+  "name": "Trainer",
+  "license": "CC-BY 3.0",
+  "author": "jeremy",
+  "sourceUrl": "https://poly.pizza/m/cs7k_ENAZjQ",
+  "scale": [
+   0.0267974,
+   0.0267974,
+   0.0267974
+  ],
+  "rotation": [
+   0,
+   90,
+   0
+  ],
+  "origin": "center",
+  "offset": [
+   0,
+   -0.064,
+   -0.0018
+  ],
+  "size": [
+   0.0934,
+   0.1274,
+   0.26
+  ],
+  "material": "toon",
+  "collider": [
+   0.1,
+   0.1,
+   0.26
+  ]
+ },
+ "sock": {
+  "file": "props/sock.glb",
+  "category": "props",
+  "name": "Socks",
+  "license": "CC-BY 3.0",
+  "author": "MiniPoly",
+  "sourceUrl": "https://poly.pizza/m/hcfzStK2HR",
+  "scale": [
+   0.0986625,
+   0.0986625,
+   0.0986625
+  ],
+  "rotation": [
+   -90,
+   0,
+   0
+  ],
+  "origin": "center",
+  "offset": [
+   0.0196,
+   0.0001,
+   0.0314
+  ],
+  "size": [
+   0.1264,
+   0.0707,
+   0.2
+  ],
+  "material": "toon",
+  "collider": [
+   0.08,
+   0.02,
+   0.2
+  ]
+ },
+ "sprayBottle": {
+  "file": "props/sprayBottle.glb",
+  "category": "props",
+  "name": "Spray Bottle",
+  "license": "CC-BY 3.0",
+  "author": "J-Toastie",
+  "sourceUrl": "https://poly.pizza/m/uQ6VGKpkWm",
+  "scale": [
+   0.110248,
+   0.110248,
+   0.110248
+  ],
+  "rotation": [
+   0,
+   -90,
+   0
+  ],
+  "origin": "center",
+  "offset": [
+   0,
+   -0.1161,
+   0.0151
+  ],
+  "size": [
+   0.0619,
+   0.24,
+   0.1053
+  ],
+  "material": "toon",
+  "notes": "Sitter tool (not a PropKind). Nozzle points +X in source, rotated so it points +Z."
+ },
+ "toyMouse": {
+  "file": "props/toyMouse.glb",
+  "category": "props",
+  "name": "Toy Mouse",
+  "license": "CC-BY 3.0",
+  "author": "sirkitree",
+  "sourceUrl": "https://poly.pizza/m/49PYgABKfFo",
+  "scale": [
+   0.169001,
+   0.169001,
+   0.169001
+  ],
+  "rotation": [
+   0,
+   90,
+   0
+  ],
+  "origin": "center",
+  "offset": [
+   -0.0103,
+   0.0038,
+   0.0187
+  ],
+  "size": [
+   0.0574,
+   0.0335,
+   0.1
+  ],
+  "material": "toon",
+  "collider": [
+   0.06,
+   0.04,
+   0.1
+  ]
+ },
+ "tpRoll": {
+  "file": "props/tpRoll.glb",
+  "category": "props",
+  "name": "Toilet paper",
+  "license": "CC-BY 3.0",
+  "author": "Poly by Google",
+  "sourceUrl": "https://poly.pizza/m/b-iE6Ii4GZk",
+  "scale": [
+   0.111517,
+   0.111517,
+   0.111517
+  ],
+  "rotation": [
+   0,
+   0,
+   90
+  ],
+  "origin": "center",
+  "offset": [
+   0,
+   0,
+   -0.0132
+  ],
+  "size": [
+   0.1085,
+   0.1,
+   0.1349
+  ],
+  "material": "toon",
+  "collider": [
+   0.11,
+   0.1,
+   0.11
+  ]
+ },
+ "treatBag": {
+  "file": "props/treatBag.glb",
+  "category": "props",
+  "name": "flour_sack_closed",
+  "license": "CC0 1.0",
+  "author": "Isa Lousberg (Tiny Treats)",
+  "sourceUrl": "https://tinytreats.itch.io/bakery-interior",
+  "scale": [
+   0.364653,
+   0.364653,
+   0.364653
+  ],
+  "rotation": [
+   0,
+   0,
+   0
+  ],
+  "origin": "center",
+  "offset": [
+   0,
+   -0.1005,
+   -0.0036
+  ],
+  "size": [
+   0.1947,
+   0.2,
+   0.1225
+  ],
+  "material": "toon",
+  "notes": "Sitter tool (not a PropKind). Rolled-top sack with a blank label."
+ },
+ "trophy": {
+  "file": "props/trophy.glb",
+  "category": "props",
+  "name": "Trophy",
+  "license": "CC-BY 3.0",
+  "author": "Casey Tumbers",
+  "sourceUrl": "https://poly.pizza/m/6Xu7mttjodo",
+  "scale": [
+   0.398077,
+   0.398077,
+   0.398077
+  ],
+  "rotation": [
+   0,
+   0,
+   0
+  ],
+  "origin": "center",
+  "offset": [
+   0.0002,
+   0.0029,
+   -0.0028
+  ],
+  "size": [
+   0.1109,
+   0.2,
+   0.18
+  ],
+  "material": "toon",
+  "collider": [
+   0.1,
+   0.2,
+   0.1
+  ]
+ },
+ "vase": {
+  "file": "props/vase.glb",
+  "category": "props",
+  "name": "Vase",
+  "license": "CC-BY 3.0",
+  "author": "Poly by Google",
+  "sourceUrl": "https://poly.pizza/m/20LOTk3BnjO",
+  "scale": [
+   0.00375253,
+   0.00375253,
+   0.00375253
+  ],
+  "rotation": [
+   0,
+   0,
+   0
+  ],
+  "origin": "center",
+  "offset": [
+   0,
+   -0.15,
+   0
+  ],
+  "size": [
+   0.1705,
+   0.3,
+   0.1705
+  ],
+  "material": "toon",
+  "collider": [
+   0.14,
+   0.3,
+   0.14
+  ]
+ },
+ "wineBottle": {
+  "file": "props/wineBottle.glb",
+  "category": "props",
+  "name": "wine_bottle",
+  "license": "CC0 1.0",
+  "author": "Isa Lousberg (Tiny Treats)",
+  "sourceUrl": "https://tinytreats.itch.io/pleasant-picnic",
+  "scale": [
+   0.315044,
+   0.315044,
+   0.315044
+  ],
+  "rotation": [
+   0,
+   0,
+   0
+  ],
+  "origin": "center",
+  "offset": [
+   0,
+   -0.15,
+   0
+  ],
+  "size": [
+   0.1229,
+   0.3,
+   0.1229
+  ],
+  "material": "toon",
+  "collider": [
+   0.08,
+   0.3,
+   0.08
+  ]
+ },
+ "yarn": {
+  "file": "props/yarn.glb",
+  "category": "props",
+  "name": "Yarn Ball v2",
+  "license": "CC-BY 3.0",
+  "author": "sirkitree",
+  "sourceUrl": "https://poly.pizza/m/0kSphuYy8Or",
+  "scale": [
+   0.208623,
+   0.208623,
+   0.208623
+  ],
+  "rotation": [
+   0,
+   0,
+   0
+  ],
+  "origin": "center",
+  "offset": [
+   0.0156,
+   -0.0291,
+   0.0213
+  ],
+  "size": [
+   0.1183,
+   0.12,
+   0.1206
+  ],
+  "material": "toon",
+  "collider": [
+   0.12,
+   0.12,
+   0.12
+  ]
+ }
+}

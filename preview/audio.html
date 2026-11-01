@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>MEOWHEM audio</title>
+  <style>
+    body { margin: 0; padding: 20px; background: #2a2320; color: #f6eadf; font: 14px/1.4 system-ui, sans-serif; }
+    h1 { font-size: 20px; margin: 0 0 12px; }
+    h2 { font-size: 14px; margin: 18px 0 8px; color: #e9b98d; text-transform: uppercase; letter-spacing: .06em; }
+    .row { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+    button { background: #4a3c35; color: #f6eadf; border: 0; border-radius: 8px; padding: 7px 11px; font: inherit; cursor: pointer; }
+    button:hover { background: #5d4b42; }
+    button.on { background: #d9824b; color: #2a2320; }
+    button.missing { outline: 2px solid #e05050; }
+    label { display: inline-flex; gap: 6px; align-items: center; margin-right: 14px; }
+    #report { white-space: pre; font: 12px/1.35 ui-monospace, monospace; background: #1c1715; padding: 10px; border-radius: 8px; max-height: 360px; overflow: auto; }
+    .muted { color: #b9a596; }
+  </style>
+</head>
+<body>
+  <h1>MEOWHEM audio</h1>
+  <p class="muted">Any click unlocks audio. Every play gets slight pitch and volume variation.</p>
+  <div class="row">
+    <label>cat pitch <input id="pitch" type="range" min="0.75" max="1.35" step="0.01" value="1" /> <span id="pitchV">1.00</span></label>
+    <label>position <select id="pos"><option value="">non-positional</option><option value="-3,0,0">3 m left</option><option value="3,0,0">3 m right</option><option value="0,0,-4">4 m behind</option><option value="0,0,15">15 m ahead</option></select></label>
+    <label>master <input id="vol" type="range" min="0" max="1" step="0.01" value="0.9" /></label>
+  </div>
+  <h2>Music</h2>
+  <div class="row" id="music"></div>
+  <h2>Loops</h2>
+  <div class="row" id="loops"></div>
+  <h2>Sounds</h2>
+  <div class="row" id="sounds"></div>
+  <h2>Checks</h2>
+  <div id="report">loading…</div>
+  <script type="module" src="./audio.ts"></script>
+</body>
+</html>

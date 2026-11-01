@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>MEOWHEM cat TV</title>
+  <style>
+    body { margin: 0; padding: 16px; background: #2a2320; color: #f6eadf; font: 14px/1.4 system-ui, sans-serif; }
+    .row { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-bottom: 10px; }
+    button { background: #4a3c35; color: #f6eadf; border: 0; border-radius: 8px; padding: 7px 11px; font: inherit; cursor: pointer; }
+    button.on { background: #d9824b; color: #2a2320; }
+    #screen canvas { width: 960px; max-width: 100%; height: auto; border-radius: 10px; box-shadow: 0 0 0 10px #111, 0 10px 40px rgba(0,0,0,.6); display: block; }
+    #grid canvas { width: 1024px; max-width: 100%; display: block; }
+    #three { width: 480px; height: 300px; margin-top: 18px; border-radius: 8px; }
+    label { display: inline-flex; gap: 6px; align-items: center; }
+  </style>
+</head>
+<body>
+  <div class="row" id="shows"></div>
+  <div class="row">
+    <button id="power">power</button>
+    <label><input type="checkbox" id="cycle" /> cycle shows</label>
+    <label>time <input id="time" type="range" min="0" max="15" step="0.05" value="0" style="width: 300px" /> <span id="timeV">0.0</span></label>
+  </div>
+  <div id="screen"></div>
+  <div id="grid"></div>
+  <canvas id="three"></canvas>
+  <script type="module" src="./tv.ts"></script>
+</body>
+</html>

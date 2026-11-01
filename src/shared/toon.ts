@@ -56,7 +56,7 @@ export function outlineMaterial(thickness = 0.012, color: THREE.ColorRepresentat
     shader.uniforms.outlineThickness = { value: thickness };
     shader.vertexShader = shader.vertexShader
       .replace('#include <common>', '#include <common>\nuniform float outlineThickness;')
-      .replace('#include <begin_vertex>', '#include <begin_vertex>\ntransformed += normalize(objectNormal) * outlineThickness;');
+      .replace('#include <begin_vertex>', '#include <begin_vertex>\ntransformed += normalize(normal) * outlineThickness;');
   };
   m.customProgramCacheKey = () => `outline-${thickness}`;
   outlineCache.set(key, m);
