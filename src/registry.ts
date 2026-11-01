@@ -15,7 +15,7 @@ import { createAudio as createRealAudio } from './audio/audio';
 import { createCatTv as createRealTv } from './tv/catTv';
 import { openMinigame as openRealMinigame } from './minigames';
 import { loadAssets } from './assets/loader';
-import { createCat } from './models/cat';
+import { createCat, CAT_ACCESSORIES } from './models/cat';
 import { createSitter } from './models/sitter';
 import { createProp, createMess } from './models/props';
 import { buildHouse } from './world/level';
@@ -47,3 +47,6 @@ export const createFx = (scene: THREE.Scene): FxApi => createRealFx(scene);
 export const createAudio = (): AudioApi => createRealAudio();
 export const createCatTv = (): CatTvApi => createRealTv();
 export const openMinigame = (kind: MinigameKind, host: MinigameHost): MinigameApi => openRealMinigame(kind, host);
+
+/** accessories the real cat model supports (menu customization shows only these) */
+export { CAT_ACCESSORIES };
