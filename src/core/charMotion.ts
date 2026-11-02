@@ -5,7 +5,7 @@
 import type { Role, Vec3 } from '../shared/contracts';
 import type { CharState } from './types';
 import { CFG } from '../config';
-import { RAPIER, CHAR_QUERY, G, groups } from './physics';
+import { RAPIER, CHAR_QUERY, G, groups, rayDist } from './physics';
 import { clamp, damp, dampAngle, lerp, wrapAngle } from './math';
 
 export interface MotionInput {
@@ -25,6 +25,8 @@ export interface MotionMods {
 }
 
 export const capsule = (role: Role) => (role === 'cat' ? CFG.cat : CFG.sitter);
+const DOWN: Vec3 = [0, -1, 0];
+const RING = Array.from({ length: 8 }, (_, i) => [Math.sin((i * Math.PI) / 4), Math.cos((i * Math.PI) / 4)] as const);
 
 export class CharMotion {
   readonly body: RAPIER.RigidBody;
@@ -178,6 +180,17 @@ export class CharMotion {
     this.vel[1] -= CFG.gravity * dt;
 
     const want = { x: this.vel[0] * dt, y: this.vel[1] * dt, z: this.vel[2] * dt };
+    let px = 0, pz = 0;
+    // ledge perch: the capsule's round bottom can rest on a corner (the sofa cushion's front edge) with nothing under
+    // its middle, floating up to its radius. Grounded with no floor under the feet: slide off toward the open side.
+    if (this.grounded && rayDist(this.world, [this.pos[0], this.pos[1] + 0.05, this.pos[2]], DOWN, 0.12) > 0.1) {
+      let sx = 0, sz = 0;
+      for (const [dx, dz] of RING) {
+        if (rayDist(this.world, [this.pos[0] + dx * c.radius, this.pos[1] + 0.05, this.pos[2] + dz * c.radius], DOWN, 0.12) <= 0.1) { sx += dx; sz += dz; }
+      }
+      const l = Math.hypot(sx, sz);
+      if (l > 0.5) { px = -(sx / l) * 1.5 * dt; pz = -(sz / l) * 1.5 * dt; want.x += px; want.z += pz; } // supported on both sides (chair posts): stay
+    }
     this.ctrl.computeColliderMovement(this.collider, want, RAPIER.QueryFilterFlags.EXCLUDE_SENSORS, CHAR_QUERY[this.role]);
     const m = this.ctrl.computedMovement();
     const wasGrounded = this.grounded;
@@ -188,8 +201,8 @@ export class CharMotion {
     }
     if (!this.grounded && this.vel[1] > 0 && m.y < want.y - 1e-4) this.vel[1] = 0; // ceiling
     if (dt > 0) {
-      this.vel[0] = m.x / dt;
-      this.vel[2] = m.z / dt;
+      this.vel[0] = (m.x - px) / dt; // the perch slide is a nudge, not momentum
+      this.vel[2] = (m.z - pz) / dt;
     }
     this.pos[0] += m.x;
     this.pos[1] += m.y;

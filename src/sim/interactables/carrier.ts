@@ -14,8 +14,11 @@ const def = defineInteractable({
   },
   tick(ctx) {
     const occupied = caged(ctx).length > 0;
+    // a cat sitting on the basket: the lids swing shut under it (open, they stand up in a V right where it sits)
+    const sp = ctx.spot('carrier'), cx = sp.pos[0] + Math.sin(sp.facing) * 0.45, cz = sp.pos[2] + Math.cos(sp.facing) * 0.45;
+    const sat = ctx.chars('cat').some((c) => !c.st.caged && c.p[1] > 0.25 && Math.abs(c.p[0] - cx) < 0.36 && Math.abs(c.p[2] - cz) < 0.36);
     ctx.setWorld('carrier.occupied', occupied);
-    ctx.setWorld('carrier.closed', occupied);
+    ctx.setWorld('carrier.closed', occupied || sat);
   },
   uses: [
     {

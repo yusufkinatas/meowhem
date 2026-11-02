@@ -478,7 +478,15 @@ export class TpsCamera {
     // (the sitter also fades out with a short boom: her chibi head would fill half the frame and cover the
     // crosshair; Fortnite does the same against a wall)
     const boomK = role === 'sitter' ? smooth(clamp((this.dist - 0.45) / 0.75, 0, 1)) : 1;
-    this.fade = this.spotT > 0 ? 1 : Math.min(0.35 + 0.65 * smooth(clamp((gap - 0.06) / 0.4, 0, 1)), boomK);
+    // her chibi head (r ~0.36 m around 1.4 m) is what fills the screen: fade by the share of the screen height it
+    // covers. Open rooms frame it at ~0.3 of the height (opaque); a wall 1.4 m behind her is ~0.48 (0.2, a light ghost)
+    let headK = 1;
+    if (role === 'sitter') {
+      const hd = Math.max(0.37, Math.hypot(pos.x - T.x, pos.y - T.y - 1.4, pos.z - T.z));
+      const cover = (2 * Math.asin(0.36 / hd)) / THREE.MathUtils.degToRad(this.cam.fov);
+      headK = 1 - 0.8 * smooth(clamp((cover - 0.31) / 0.14, 0, 1)); // half-faded heads look muddy (the inside shows): go light fast
+    }
+    this.fade = this.spotT > 0 ? 1 : Math.min(0.35 + 0.65 * smooth(clamp((gap - 0.06) / 0.4, 0, 1)), boomK, headK);
     this.tooClose = this.spotT === 0 && (gap < 0.06 || this.fade < 0.08);
 
     this.cut = false;

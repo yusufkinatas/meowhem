@@ -501,7 +501,10 @@ export function buildHouse(): LevelData {
   // beside the toilet, not over it: a cat on the tank jumps up onto it instead of into its underside
   put('shelf', 0.6, -5.775, toN, { y: 1.28, box: [[-0.6, 0.2, -0.15, 0.6, 0.24, 0.15]], surf: [[0.35, 0.24, 0]] });
   // uniform 1.3: vanity 0.47, vessel bowl rim 0.72 (a cat sits in the bowl at 0.58)
-  put('bathSink', -2.47, -3.2, toE, { s: 1.3, box: [[-0.6, 0, -0.455, 0.6, 0.47, 0.455], [-0.36, 0.47, -0.2, 0.36, 0.58, 0.42]], surf: [[0, 0.58, 0.1]] });
+  // thin bowl walls up to the rim: the camera stops at them instead of sitting inside the bowl (a cat still hops in)
+  put('bathSink', -2.47, -3.2, toE, { s: 1.3, box: [[-0.6, 0, -0.455, 0.6, 0.47, 0.455], [-0.36, 0.47, -0.2, 0.36, 0.58, 0.42],
+    [-0.36, 0.58, -0.2, -0.32, 0.72, 0.42], [0.32, 0.58, -0.2, 0.36, 0.72, 0.42], [-0.32, 0.58, -0.2, 0.32, 0.72, -0.16], [-0.32, 0.58, 0.38, 0.32, 0.72, 0.42]],
+    surf: [[0, 0.58, 0.1]] });
   put('mirror', -2.9, -3.2, toE, { y: 1.35 });
   put('washer', -2.54, -2.1, toE, { box: 'full', surf: [[-0.1, 0.85, 0.12]] });
   put('towels', -2.72, -2.3, toE, { y: 0.85, box: [[-0.13, 0, -0.13, 0.13, 0.26, 0.13]] }); // round stack in the back corner
@@ -698,7 +701,7 @@ export function buildHouse(): LevelData {
 
   // ---------------------------------------------------------------- spawns, sun
   const spawns = {
-    sitter: [1.6, 0, 1.5] as Vec3, // west end of the hallway: the counter cat (player 1 in solo) is ~8 m of walking away
+    sitter: [1.6, 0, 2.05] as Vec3, // west end of the hallway, north of centre (the open office door leaf would block the shoulder camera): the counter cat (player 1 in solo) is ~8 m of walking away
     // cat 0 stands at the end of the mug row, looking along it: with its back to the wall the camera had no room
     cats: [[4.3, 0.92, 5.97], [-5.55, 0.33, 3.55], [0.9, 0, -4.3], [5.75, 0.75, -5.45]] as Vec3[],
     sitterYaw: toW,
