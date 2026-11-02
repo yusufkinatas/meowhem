@@ -158,6 +158,7 @@ export function createAudio(): MeowAudio {
   let masterVol = 0.9;
   let musicMode: MusicMode = 'off';
   let listener: [Vec3, number] = [[0, 0, 0], 0];
+  let lx = NaN, ly = NaN, lz = NaN, lyaw = NaN; // last written listener (AudioParam writes cost, even unchanged)
   let nextBar = 0, nextBarTime = 0, timer = 0;
   const active = new Map<SoundName, number>();
   const lastPlay = new Map<SoundName, number>();
@@ -178,11 +179,14 @@ export function createAudio(): MeowAudio {
   }
   function applyListener() {
     if (!ctx) return;
-    const [[x, y, z], yaw] = listener, l = ctx.listener, fx = Math.sin(yaw), fz = Math.cos(yaw);
+    const [[x, y, z], yaw] = listener, l = ctx.listener;
+    if (x === lx && y === ly && z === lz && yaw === lyaw) return;
+    lx = x; ly = y; lz = z; lyaw = yaw;
+    const fx = Math.sin(yaw), fz = Math.cos(yaw);
     if (l.positionX) {
+      // (forwardY, up are constant: set once in unlock)
       l.positionX.value = x; l.positionY.value = y; l.positionZ.value = z;
-      l.forwardX.value = fx; l.forwardY.value = 0; l.forwardZ.value = fz;
-      l.upX.value = 0; l.upY.value = 1; l.upZ.value = 0;
+      l.forwardX.value = fx; l.forwardZ.value = fz;
     } else {
       l.setPosition(x, y, z);
       l.setOrientation(fx, 0, fz, 0, 1, 0);
@@ -257,6 +261,8 @@ export function createAudio(): MeowAudio {
         master = ctx.createGain(); master.gain.value = masterVol;
         sfx = ctx.createGain(); musicGain = ctx.createGain(); musicGain.gain.value = 0.42;
         sfx.connect(master); musicGain.connect(master); master.connect(comp); comp.connect(ctx.destination);
+        const l = ctx.listener;
+        if (l.forwardY) { l.forwardY.value = 0; l.upX.value = 0; l.upY.value = 1; l.upZ.value = 0; }
         applyListener();
         applyMusic();
         refreshLoops();

@@ -197,6 +197,7 @@ export interface FxOptions {
   scale?: number;
   duration?: number;     // seconds (looping fx like fightCloud / stink / zzz)
   follow?: THREE.Object3D; // stick to an object
+  own?: boolean;          // seen from the eye: my own spray (a small nozzle puff), a splash on my own cat (no puffs)
 }
 
 export interface FxApi {

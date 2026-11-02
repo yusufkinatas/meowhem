@@ -5,6 +5,7 @@
  */
 import * as THREE from 'three';
 import type { Role } from '../shared/contracts';
+import { modelTemplates } from '../assets/loader';
 
 const KEY_DAY = new THREE.Color('#fff3df'), KEY_DUSK = new THREE.Color('#ffae6b');
 const SKY_DAY = new THREE.Color('#dfe9ff'), SKY_DUSK = new THREE.Color('#ffcfa8');
@@ -18,7 +19,9 @@ export class Renderer {
   readonly camera = new THREE.PerspectiveCamera(70, 1, 0.05, 80);
   readonly hemi = new THREE.HemisphereLight(SKY_DAY, GROUND, HEMI_I);
   readonly sun = new THREE.DirectionalLight(KEY_DAY, KEY_I);
-  readonly flashlight = new THREE.SpotLight('#fff6e0', 0, 16, 0.5, 0.6, 1.1);
+  /** (held at the eye in first person: a flat falloff, or what is within reach, a held cat, a wall at arm's length,
+   *  blows out to white. Decay 0.4 keeps a room 6 m off as lit as with 1.1 from behind the sitter) */
+  readonly flashlight = new THREE.SpotLight('#fff6e0', 0, 16, 0.5, 0.6, 0.4);
   /** 0..1, set from the time.dusk world key */
   dusk = 0;
   private bg = new THREE.Color('#f4e4cc');
@@ -30,10 +33,12 @@ export class Renderer {
   private col = new THREE.Color();
   private center = new THREE.Vector3();
   private flashEl: HTMLDivElement;
+  private lastFilter = '';
 
   constructor(readonly canvas: HTMLCanvasElement) {
     this.renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
-    this.renderer.setPixelRatio(Math.min(2, window.devicePixelRatio));
+    this.renderer.debug.checkShaderErrors = import.meta.env.DEV; // the check stalls on every program link
+    this.renderer.setPixelRatio(Math.min(1.5, window.devicePixelRatio));
     this.renderer.outputColorSpace = THREE.SRGBColorSpace;
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
     this.renderer.toneMappingExposure = 1.12;
@@ -41,7 +46,7 @@ export class Renderer {
     // PCF with a blur radius (r18x removed PCFSoft): soft edges from one shadow map
     this.renderer.shadowMap.type = THREE.PCFShadowMap;
     this.scene.background = this.bg.clone();
-    this.scene.add(this.hemi);
+    this.scene.add(this.hemi, this.camera); // (the camera carries the first-person viewmodel)
     this.sun.castShadow = true;
     this.sun.shadow.mapSize.set(2048, 2048);
     this.sun.shadow.bias = -0.0006;
@@ -80,6 +85,20 @@ export class Renderer {
     this.camera.updateProjectionMatrix();
   }
 
+  /**
+   * Compile every shader now instead of on first sight: the scene, plus the model templates for props and mess
+   * that spawn later. flashlight: the blackout set too (one more spot light relinks every lit material, an 80 ms
+   * hitch on the first blackout). compile() reads the lights synchronously, so flipping visibility around it is safe.
+   */
+  prewarm(flashlight: boolean) {
+    const all = () => {
+      void this.renderer.compileAsync(this.scene, this.camera);
+      for (const t of modelTemplates()) this.renderer.compile(t, this.camera, this.scene);
+    };
+    all();
+    if (flashlight) { this.flashlight.visible = true; all(); this.flashlight.visible = false; }
+  }
+
   /** a short white flash (camera shutter) */
   flash(ms = 120) {
     this.flashEl.style.transition = 'none';
@@ -108,12 +127,16 @@ export class Renderer {
     bg.copy(this.bg).lerp(this.duskBg, k).lerp(this.darkBg, Math.min(1, sitterDark + catDark * 0.7));
     this.renderer.toneMappingExposure = 1.12 + catDark * 0.18;
     this.flashlight.visible = sitterDark > 0.05;
-    this.flashlight.intensity = 34 * sitterDark;
+    this.flashlight.intensity = 9 * sitterDark;
     const f: string[] = [];
     if (catDark > 0.02) f.push(`saturate(${(1 - catDark * 0.4).toFixed(3)}) brightness(${(1 + catDark * 0.12).toFixed(3)}) hue-rotate(${(-10 * catDark).toFixed(1)}deg)`);
     if (this.catnip > 0.02) f.push(`hue-rotate(${(Math.sin(this.t * 1.3) * 40 * this.catnip).toFixed(1)}deg) saturate(${(1 + this.catnip * 0.5).toFixed(3)})`);
-    const filter = f.join(' ');
-    if (this.canvas.style.filter !== filter) this.canvas.style.filter = filter;
+    this.setFilter(f.join(' '));
+  }
+
+  /** CSS filter on the canvas, written only when it changes (reading style.filter back every frame costs) */
+  setFilter(filter: string) {
+    if (filter !== this.lastFilter) this.canvas.style.filter = this.lastFilter = filter;
   }
 
   render() {

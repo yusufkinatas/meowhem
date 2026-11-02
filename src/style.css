@@ -247,7 +247,7 @@ input[type='checkbox'] { width: 22px; height: 22px; accent-color: var(--terra); 
 .mash .bar { width: 260px; height: 18px; border: 3px solid var(--ink); border-radius: 99px; background: #fff; overflow: hidden; margin: 6px auto 0; }
 .mash .bar i { display: block; height: 100%; background: var(--honey); transition: width 0.1s; }
 @keyframes shake { 25% { transform: translateX(calc(-50% - 2px)); } 75% { transform: translateX(calc(-50% + 2px)); } }
-.crosshair { position: absolute; left: 50%; top: 50%; width: 10px; height: 10px; margin: -5px 0 0 -5px; border-radius: 50%; border: 2px solid #fff; box-shadow: 0 0 0 2px rgba(58, 42, 34, 0.6); display: none; }
+.crosshair { position: absolute; left: 50%; top: 50%; width: 4px; height: 4px; margin: -2px 0 0 -2px; border-radius: 50%; background: #fff; box-shadow: 0 0 0 1.5px rgba(58, 42, 34, 0.55); display: none; pointer-events: none; }
 .board {
   position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); display: none; background: var(--paper); border: 3px solid var(--ink);
   border-radius: 20px; padding: 16px 22px; box-shadow: var(--shadow); min-width: 320px;

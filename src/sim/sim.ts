@@ -742,15 +742,24 @@ export class Sim {
     c.s.gestT = t;
   }
 
-  /** props a paw in front of the cat reaches (the v1 swipe rule) */
+  /** props a paw in front of the cat reaches (the v1 swipe rule); a player's cone is about the first-person view */
   private reach(s: CharState, out: SimProp[]) {
     const P = CFG.props;
     const chest: Vec3 = [s.p[0], s.p[1] + 0.2, s.p[2]];
+    const paw: Vec3 = [s.p[0], chest[1] + Math.max(0, rayDist(this.world, chest, [0, 1, 0], 0.25) - 0.03), s.p[2]]; // reaching up, under a low lid too
+    const bot = !!this.byId.get(s.id)?.brain, eye = add(s.p, [0, CFG.camera.cat.eye, 0]), L = s.look, ll = Math.hypot(L[0], L[1], L[2]) || 1;
     for (const pr of this.props.values()) {
       const dy = pr.p[1] - s.p[1];
       if (dy < -0.25 || dy > 0.9) continue;
       const d = distXZ(chest, pr.p);
-      if (d > P.swipeRange || (d > 0.2 && facingDot(s.yaw, chest, pr.p) < 0.35)) continue;
+      if (d > P.swipeRange) continue;
+      if (bot) { if (d > 0.2 && facingDot(s.yaw, chest, pr.p) < 0.35) continue; }
+      else {
+        // a player's paw goes where the crosshair is: a cone around the look ray from the eye, pitch included
+        const tx = pr.p[0] - eye[0], ty = pr.p[1] - eye[1], tz = pr.p[2] - eye[2];
+        if ((tx * L[0] + ty * L[1] + tz * L[2]) / ((Math.hypot(tx, ty, tz) || 1) * ll) < 0.55) continue;
+      }
+      if (!this.lineOfSight(paw, pr.p)) continue; // not through a table top or a door
       out.push(pr);
     }
     return out;
@@ -833,8 +842,14 @@ export class Sim {
     else this.emit({ e: 'push', id: c.s.id, v }, c.s.id);
   }
 
+  /** first person: the bottle sits right of and below the eye (camera space, so it follows the look) */
   private nozzle(s: CharState, d: Vec3): Vec3 {
-    return add(add(s.p, [0, 1.25, 0]), [d[0], 0, d[2]], 0.45);
+    const e = add(s.p, [0, CFG.camera.sitter.eye, 0]), h = Math.hypot(d[0], d[2]) || 1;
+    // right (-dz, 0, dx)/h and the view's up (right x d)
+    const v: Vec3 = [d[0] * 0.4 - (d[2] / h) * 0.21 + ((d[0] * d[1]) / h) * 0.14, d[1] * 0.4 - h * 0.14, d[2] * 0.4 + (d[0] / h) * 0.21 + ((d[2] * d[1]) / h) * 0.14];
+    // point-blank at a wall: pulled in along the same line of sight, so it stays on the bottle's tip and out of the wall
+    const l = Math.hypot(v[0], v[1], v[2]), k = clamp((rayDist(this.world, e, [v[0] / l, v[1] / l, v[2] / l], l) - 0.05) / l, 0, 1);
+    return add(e, v, k);
   }
 
   private spray(c: SimChar, dir: Vec3) {
@@ -842,24 +857,25 @@ export class Sim {
     if (s.role !== 'sitter' || s.cd.spray || s.holding) return;
     const l = Math.hypot(dir[0], dir[1], dir[2]) || 1;
     const d: Vec3 = [dir[0] / l, dir[1] / l, dir[2] / l];
-    const nozzle = this.nozzle(s, d);
+    const nozzle = this.nozzle(s, d), eye = add(s.p, [0, CFG.camera.sitter.eye, 0]);
     s.cd.spray = S.cooldown;
     this.gesture(c, 'spray', 0.35);
     if (s.ammo <= 0) return this.emptySpray(c, d, nozzle);
     s.ammo--;
-    this.fx('spray', nozzle, { dir: d });
+    // the water goes from the nozzle to what the crosshair is on
+    const aim = add(eye, d, rayDist(this.world, eye, d, S.range));
+    const ad = [aim[0] - nozzle[0], aim[1] - nozzle[1], aim[2] - nozzle[2]], al = Math.hypot(ad[0], ad[1], ad[2]) || 1;
+    this.fx('spray', nozzle, { dir: [ad[0] / al, ad[1] / al, ad[2] / al], follow: s.id }); // (rides along with her: she never walks into it)
     this.sound('spray', nozzle);
     const cos = Math.cos((S.coneDeg * Math.PI) / 180);
     const cloud = new Set<string>(); // fighters already soaked through their cloud
     for (const o of this.chars) {
       if (o.s.role !== 'cat' || o.s.st.caged || o.s.grabbedBy || cloud.has(o.s.id)) continue;
       const t: Vec3 = [o.s.p[0], o.s.p[1] + 0.2, o.s.p[2]];
-      // horizontal cone (the bottle arcs; cats are low), generous vertical band
-      const tx = t[0] - s.p[0], tz = t[2] - s.p[2], ty = t[1] - nozzle[1];
-      const tl = Math.hypot(tx, tz), dl = Math.hypot(d[0], d[2]) || 1;
-      if (tl > S.range + 0.3 || ty > 0.8 || ty < -1.9) continue;
-      if (tl > 0.5 && (tx * d[0] + tz * d[2]) / (tl * dl) < cos) continue;
-      if (!this.lineOfSight(nozzle, t)) continue;
+      // a cone around the look ray from the eye: what the crosshair is on gets wet
+      const tx = t[0] - eye[0], ty = t[1] - eye[1], tz = t[2] - eye[2], tl = Math.hypot(tx, ty, tz) || 1;
+      if (Math.hypot(t[0] - s.p[0], t[2] - s.p[2]) > S.range + 0.3 || (tx * d[0] + ty * d[1] + tz * d[2]) / tl < cos) continue;
+      if (!this.lineOfSight(eye, t)) continue;
       this.stat(s.id, 'sprayHits', 1);
       this.fx('splash', t);
       const f = o.s.st.fight ? this.fights.find((x) => x.a === o.s.id || x.b === o.s.id) : null;
@@ -901,7 +917,7 @@ export class Sim {
     this.sound('treatShake', s.p);
     this.fx('noteMusic', add(s.p, [0, 1.9, 0]));
     for (const o of this.chars) {
-      if (o.s.role !== 'cat' || dist(o.s.p, s.p) > T.range) continue;
+      if (o.s.role !== 'cat' || o.s.grabbedBy || dist(o.s.p, s.p) > T.range) continue; // (not the one in her hands)
       o.s.st.treat = T.prompt;
       o.s.lookAt = add(s.p, [0, 1.5, 0]);
       this.fx('question', add(o.s.p, [0, 0.65, 0]), { follow: o.s.id });
@@ -964,6 +980,7 @@ export class Sim {
       x.s.st.fight = F.lock + 1; // ended by the fight itself
       x.s.p = add(p, fwd(yawTo(p, x.s.p)), 0.25);
       x.s.yaw = yawTo(x.s.p, p);
+      x.s.tp++; // (a cut, not a glide)
       if (x.s.item) this.dropItem(x.s);
       if (!x.s.bot) this.emit({ e: 'mgOpen', key, kind: 'fight', data: { opponent: y.s.name, fur: x.info.look?.furColor, opponentFur: y.info.look?.furColor } }, x.s.id);
       this.fx('anger', add(x.s.p, [0, 0.6, 0]), { follow: x.s.id });
@@ -1192,7 +1209,10 @@ export class Sim {
     if (hl < 1e-3) { [hx, , hz] = fwd(s.yaw); } else { hx /= hl; hz /= hl; }
     const pitch = clamp((Math.atan2(dir[1], hl) * 180) / Math.PI, T.pitchMin, T.pitchMax);
     s.yaw = Math.atan2(hx, hz);
-    const cat = this.launch(c, [hx * T.fwd, T.up + (pitch / T.pitchMax) * T.pitchUp, hz * T.fwd]);
+    const k = pitch < 0 ? Math.cos((pitch * Math.PI) / 180) : 1; // aimed down: a shorter, lower toss
+    // (plus her own speed along the throw: sprinting, she never overtakes her own cat)
+    const f = T.fwd * k + Math.max(0, s.v[0] * hx + s.v[2] * hz);
+    const cat = this.launch(c, [hx * f, T.up + (pitch / T.pitchMax) * T.pitchUp, hz * f]);
     if (!cat) return;
     this.gesture(c, 'toss', T.anim);
     this.sound('whoosh', s.p);

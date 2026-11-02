@@ -12,7 +12,7 @@ import { cloneModel, hasModel } from '../assets/loader';
 import { rayDist, type RAPIER } from '../core/physics';
 import type { Results } from '../core/types';
 import type { Views } from './view';
-import type { TpsCamera } from './camera';
+import type { FpsCamera } from './camera';
 import type { Renderer } from './renderer';
 
 const BUBBLES: Record<string, string> = {
@@ -26,12 +26,14 @@ export interface ShowCtx {
   level: LevelData;
   world: RAPIER.World;
   views: Views;
-  camera: TpsCamera;
+  camera: FpsCamera;
   renderer: Renderer;
   audio: AudioApi;
   root: HTMLElement;
   myId: string;
   myRole: Role;
+  /** where my eye was (not the spot cam's position, when a minigame was open) */
+  eye: THREE.Vector3;
   isHost: boolean;
   online: boolean;
   onAgain(): void;
@@ -66,10 +68,14 @@ export class EndShow {
 
   constructor(private c: ShowCtx, provisional: Role) {
     this.winner = provisional;
-    const cam = c.camera.cam;
-    const look = new THREE.Vector3();
-    cam.getWorldDirection(look);
-    c.camera.fixed = { pos: cam.position.clone(), target: cam.position.clone().add(look), fov: cam.fov };
+    // the freeze frame: my character (visible again) from behind (the sitter over her right shoulder), looking the
+    // way I was looking; from the front with a wall at its back
+    const eye = c.eye, cat = c.myRole === 'cat';
+    const lf = fwdV(c.camera.yaw), rt = new THREE.Vector3(-lf.z, 0, lf.x).multiplyScalar(cat ? 0 : 0.7);
+    const room = (d: number) => rayDist(c.world, [eye.x, eye.y + 0.35, eye.z], [lf.x * d, 0, lf.z * d], 2.2);
+    const s = room(-1) >= 1.2 || room(-1) >= room(1) ? -1 : 1;
+    const pos = this.clampCam(eye, eye.clone().addScaledVector(lf, s * (cat ? 1.4 : 2.1)).add(rt).setY(eye.y + 0.35));
+    c.camera.fixed = { pos, target: s < 0 ? eye.clone().addScaledVector(lf, 1.5).add(rt).setY(eye.y - 0.1) : eye, fov: 60 };
     c.audio.setMusic('off');
     c.root.classList.add('show-on');
     this.bubble = document.createElement('div');

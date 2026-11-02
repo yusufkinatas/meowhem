@@ -699,7 +699,7 @@ export function createSitter(look: SitterLook): SitterModelApi {
 
 let bottleMat: THREE.MeshToonMaterial | null = null;
 /** the downloaded bottle is pale green; tint it water blue so it reads as a spray bottle at a glance */
-function waterBottleMat(src: THREE.MeshToonMaterial) {
+export function waterBottleMat(src: THREE.MeshToonMaterial) {
   bottleMat ??= Object.assign(src.clone(), { name: 'spray_bottle_blue' });
   bottleMat.color.set('#7cc7ea');
   return bottleMat;

@@ -222,7 +222,7 @@ class SitterBrain implements BotBrain {
   private aim(v: BotWorldView, c: Cat): Vec3 {
     const me = v.self;
     const err = ((v.rng() * 2 - 1) * this.D.aimDeg * Math.PI) / 180;
-    const nz: Vec3 = [me.p[0], me.p[1] + 1.25, me.p[2]];
+    const nz: Vec3 = [me.p[0], me.p[1] + CFG.camera.sitter.eye, me.p[2]]; // (the host aims the spray from the eye)
     const dx = c.p[0] - nz[0], dy = c.p[1] + 0.2 - nz[1], dz = c.p[2] - nz[2];
     const yaw = Math.atan2(dx, dz) + err, h = Math.hypot(dx, dz);
     return [Math.sin(yaw) * h, dy + (v.rng() - 0.5) * h * 0.1, Math.cos(yaw) * h];

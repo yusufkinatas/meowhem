@@ -5,7 +5,7 @@
 import type { Spot, SpotId, Vec3 } from '../shared/contracts';
 import { CLEAN_TIME } from '../shared/propDefs';
 import { CFG } from '../config';
-import { distXZ, facingDot } from '../core/math';
+import { add, distXZ, facingDot, fwd } from '../core/math';
 import type { Mess } from '../core/types';
 import type { Sim, SimChar } from './sim';
 import type { InteractableDef, Use } from './interactables/types';
@@ -100,6 +100,29 @@ export class Interactions {
     if (!ignoreRange && c.s.role === 'cat' && anchor[1] - p[1] > 0.35) return;
     // ...and floor spots aren't worked from a counter or table above them (the bowl under the counter). The tap is drunk from up there.
     if (!ignoreRange && c.s.role === 'cat' && p[1] - anchor[1] > 0.6 && def?.id !== 'sink') return;
+    // a player (first person) gets what is roughly in front of the view (a spot's thing, not the spot you stand on). A
+    // started hold keeps going while you look around
+    if (!ignoreRange && !c.brain && this.active.get(c.s.id)?.key !== key) {
+      // (a spot worked from up there, the tap from the worktop or the basin: aimed over the basin at your own height, not
+      // at the floor spot behind the cabinet front)
+      const isSpot = !!spot && !use.at, up = isSpot && p[1] - anchor[1] > 0.6, L = c.s.look;
+      const t = isSpot ? add(anchor, fwd(spot.facing), up ? 0.65 : 0.5) : anchor;
+      const eye = add(p, [0, CFG.camera[c.s.role].eye, 0]), a: Vec3 = up ? [t[0], p[1] + 0.1, t[2]] : add(anchor, [0, isSpot ? 0.3 : 0.2, 0]);
+      if (distXZ(p, t) > 0.25) {
+        if (facingDot(Math.atan2(L[0], L[2]), p, t) < 0.4) return;
+        // (and not with the view on the ceiling or the floor far away from it)
+        const tx = t[0] - eye[0], ty = a[1] - eye[1], tz = t[2] - eye[2];
+        if ((tx * L[0] + ty * L[1] + tz * L[2]) / ((Math.hypot(tx, ty, tz) || 1) * (Math.hypot(L[0], L[1], L[2]) || 1)) < 0.25) return;
+      }
+      // (a door: aimed just off its panel on my side, or seen at an angle its own panel is in the way)
+      const door = this.sim.level.doors.find((x) => x.id === def?.id);
+      if (door) {
+        const nx = Math.sin(door.closedYaw), nz = Math.cos(door.closedYaw), k = Math.sign((eye[0] - a[0]) * nx + (eye[2] - a[2]) * nz) * 0.1;
+        a[0] += nx * k; a[2] += nz * k;
+      }
+      // ...and not through a wall or a closed door: seen from the eye, or reached crouching (a mess under the table)
+      if (!this.sim.lineOfSight(eye, a) && !this.sim.lineOfSight(add(p, [0, 0.3, 0]), a)) return;
+    }
     const chk = use.check ? use.check(this.sim.ctx, s, c.s) : true;
     if (chk === false) return;
     let ok = chk === true;
@@ -171,10 +194,14 @@ export class Interactions {
       if (o.s.role !== 'cat' || o.s.grabbedBy || o.s.st.caged || o.s.st.fight) continue;
       const d = distXZ(c.s.p, o.s.p);
       if (d > CFG.grab.range || Math.abs(o.s.p[1] - c.s.p[1]) > 1.4) continue;
-      // cone against the camera look direction (players aim with the camera), fallback body yaw
-      const ly = Math.atan2(c.s.look[0], c.s.look[2]);
       const half = Math.cos(((CFG.grab.coneDeg / 2) * Math.PI) / 180);
-      if (d > 0.5 && facingDot(ly, c.s.p, o.s.p) < half && facingDot(c.s.yaw, c.s.p, o.s.p) < half) continue;
+      if (c.brain) {
+        if (d > 0.5 && facingDot(c.s.yaw, c.s.p, o.s.p) < half) continue;
+      } else {
+        // a player grabs the cat under the crosshair: a 3D cone around the look ray from the eye, up close too
+        const L = c.s.look, tx = o.s.p[0] - c.s.p[0], ty = o.s.p[1] + 0.2 - c.s.p[1] - CFG.camera.sitter.eye, tz = o.s.p[2] - c.s.p[2];
+        if ((tx * L[0] + ty * L[1] + tz * L[2]) / ((Math.hypot(tx, ty, tz) || 1) * (Math.hypot(L[0], L[1], L[2]) || 1)) < half) continue;
+      }
       const immune = (o.s.st.grabImmune ?? 0) > 0;
       const use: Use<any> = {
         role, mode: 'instant', priority: 3, label: `Grab ${o.s.name}`,

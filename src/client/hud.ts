@@ -63,6 +63,10 @@ export class Hud {
   /** the mouse was let go by a panel, not by the player */
   private freed = false;
   private onKey = (e: KeyboardEvent) => { if (e.code === 'Escape' && this.freed) { this.freed = false; this.cache.delete('lock'); } };
+  /** viewport size, kept by a resize listener (reading window.innerWidth every frame can force a layout) */
+  private vw = window.innerWidth;
+  private vh = window.innerHeight;
+  private onResize = () => { this.vw = window.innerWidth; this.vh = window.innerHeight; };
   /** spot id -> room (for the to-do wobble), set by the client */
   spotRoom = new Map<string, RoomId>();
   onLeave: (() => void) | null = null;
@@ -81,6 +85,7 @@ export class Hud {
     this.prompt.innerHTML = `<div class="key"><svg viewBox="0 0 44 44"><circle class="ring-bg" cx="22" cy="22" r="19"/><circle class="ring" cx="22" cy="22" r="19"/></svg><span>E</span></div><div class="label"></div>`;
     this.lockHint.innerHTML = `<div class="card"><div class="lh-title">${online ? 'Mouse free' : 'Paused'}</div><div class="lh-sub">${online ? 'The round keeps going. Click to look around.' : 'Click to look around. Esc frees the mouse.'}</div>${settingsHtml()}<div class="row"><button class="btn primary" data-a="resume">Resume</button><button class="btn" data-a="leave">Leave game</button></div></div><div class="lh-soft">Click to look around</div>`;
     window.addEventListener('keydown', this.onKey);
+    window.addEventListener('resize', this.onResize);
     bindSettings(this.lockHint);
     this.lockHint.addEventListener('click', (e) => {
       const a = (e.target as HTMLElement).dataset.a;
@@ -145,7 +150,9 @@ export class Hud {
     });
 
     // role panel
-    this.set('panel', this.panelHtml(me), (v) => { this.panel.innerHTML = v; });
+    this.set('panel', this.panelHtml(me), (v) => { this.panel.innerHTML = v; this.cache.delete('stam'); });
+    // the Zoomies bar moves every frame while sprinting: its width only, not a panel rebuild
+    if (role === 'cat') this.set('stam', String(Math.round(me.stamina * 100)), (v) => { this.panel.querySelector<HTMLElement>('.stam')!.style.width = `${v}%`; });
     this.set('panelHide', String(extras.stripOpen), (v) => this.panel.classList.toggle('hidden', v === 'true'));
 
     // prompt
@@ -176,7 +183,7 @@ export class Hud {
     this.set('mash', mash, (v) => { this.mash.style.display = v ? 'block' : 'none'; this.mash.innerHTML = `<div class="mash-label">${esc(v)}</div><div class="bar"><i></i></div>`; });
     if (mash) (this.mash.querySelector('i') as HTMLElement).style.width = `${Math.round(me.mash * 100)}%`;
 
-    this.crosshair.style.display = role === 'sitter' && extras.locked && snap.phase === 'playing' ? 'block' : 'none';
+    this.crosshair.style.display = extras.locked && !extras.mgOpen && !extras.stripOpen && snap.phase === 'playing' ? 'block' : 'none';
     // a panel (minigame) let the mouse go: take it back when the panel closes. If the browser says no, a small
     // "click" hint instead of the pause card, the player never asked to pause
     const live = !extras.ended && snap.phase === 'playing';
@@ -227,7 +234,7 @@ export class Hud {
     const buffs = BUFFS.filter(([k]) => (me.st[k] ?? 0) > 0).map(([k, n, tone]) => `<span class="chip ${tone}">${n} ${Math.ceil(me.st[k] ?? 0)}</span>`).join('');
     const poop = Math.round(me.poop * 100);
     return `<div class="pn-title">${esc(me.name)}</div>
-      <div class="row"><span class="lbl">Zoomies</span><span class="bar"><i style="width:${Math.round(me.stamina * 100)}%"></i></span></div>
+      <div class="row"><span class="lbl">Zoomies</span><span class="bar"><i class="stam"></i></span></div>
       <div class="row"><span class="lbl">Litter</span><span class="bar ${poop >= 100 ? 'urgent' : ''}"><i class="poop" style="width:${poop}%"></i></span></div>
       ${me.poop >= 1 ? '<div class="hint">Litter box. Bathroom. Now.</div>' : ''}
       ${buffs ? `<div class="chips">${buffs}</div>` : ''}`;
@@ -256,15 +263,21 @@ export class Hud {
     }
     // through-wall markers
     const seen = new Set<string>();
-    const w = window.innerWidth, h = window.innerHeight;
+    const w = this.vw, h = this.vh;
     for (const a of alerts) {
       seen.add(a.id);
       let m = this.markerEls.get(a.id);
       if (!m) { m = el('div', 'marker', '<i></i>'); this.markers.appendChild(m); this.markerEls.set(a.id, m); }
-      _p.set(a.p[0], a.p[1] + 0.6, a.p[2]).project(cam);
-      const behind = _p.z > 1;
+      // on screen: over the spot. Off screen or behind: on the edge, the way it lies from the middle of the view
+      _p.set(a.p[0], a.p[1] + 0.6, a.p[2]).applyMatrix4(cam.matrixWorldInverse);
+      const vx = _p.x, vy = _p.y, front = _p.z < 0;
+      _p.applyMatrix4(cam.projectionMatrix);
       let x = (_p.x * 0.5 + 0.5) * w, y = (-_p.y * 0.5 + 0.5) * h;
-      if (behind) { x = w - x; y = h - 40; }
+      if (!front || Math.abs(_p.x) > 1 || Math.abs(_p.y) > 1) {
+        // (height squashed: a spot to the side sits on the side edge, clear of the corner panels; behind: the bottom)
+        const dy = (front ? vy : -1.5) * 0.35, k = Math.min((w / 2 - 30) / (Math.abs(vx) || 1e-6), (h / 2 - 55) / (Math.abs(dy) || 1e-6));
+        x = w / 2 + vx * k; y = h / 2 - dy * k;
+      }
       x = Math.max(30, Math.min(w - 30, x));
       y = Math.max(80, Math.min(h - 30, y));
       m.style.transform = `translate(${x}px, ${y}px)`;
@@ -273,12 +286,12 @@ export class Hud {
   }
 
   private updateTags(snap: Snapshot, me: CharState, cam: THREE.PerspectiveCamera, heads: Map<string, THREE.Vector3>, hideCats: boolean) {
-    const w = window.innerWidth, h = window.innerHeight;
+    const w = this.vw, h = this.vh;
     for (const c of snap.chars) {
       let t = this.tagEls.get(c.id);
       if (!t) { t = el('div', `tag ${c.role}`); t.textContent = c.name; this.tags.appendChild(t); this.tagEls.set(c.id, t); }
       const head = heads.get(c.id);
-      const hidden = c.id === me.id || !head || (hideCats && c.role === 'cat') || !!c.st.hidden || snap.phase === 'ended';
+      const hidden = c.id === me.id || c.id === me.holding || !head || (hideCats && c.role === 'cat') || !!c.st.hidden || snap.phase === 'ended';
       if (hidden) { t.style.display = 'none'; continue; }
       _p.copy(head).project(cam);
       const d = cam.position.distanceTo(head);
@@ -307,6 +320,6 @@ export class Hud {
     setTimeout(() => p.remove(), 1700);
   }
 
-  dispose() { this.root.remove(); localUi.paused = false; window.removeEventListener('keydown', this.onKey); }
+  dispose() { this.root.remove(); localUi.paused = false; window.removeEventListener('keydown', this.onKey); window.removeEventListener('resize', this.onResize); }
 }
 const _p = new THREE.Vector3();

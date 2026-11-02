@@ -57,6 +57,8 @@ export interface CharView {
   vy: number;
   grounded: boolean;
   head: THREE.Vector3;
+  /** last teleport counter seen */
+  tp: number;
 }
 
 export function catVisual(s: CharState, speed: number, vy: number, grounded: boolean): CatVisualState {
@@ -166,13 +168,21 @@ export class Views {
       this.group.add(root);
       this.chars.set(info.id, {
         id: info.id, info, cat, sitter, root, track: new Track(), pos: new THREE.Vector3(), prev: new THREE.Vector3(),
-        yaw: 0, speed: 0, vy: 0, grounded: true, head: new THREE.Vector3(),
+        yaw: 0, speed: 0, vy: 0, grounded: true, head: new THREE.Vector3(), tp: 0,
       });
     }
   }
 
   ingest(t: number, chars: CharState[], props: PropSnap[]) {
-    for (const s of chars) this.chars.get(s.id)?.track.push(t, s.p, [s.yaw]);
+    for (const s of chars) {
+      const v = this.chars.get(s.id);
+      if (!v) continue;
+      // a teleport (caged, a fight, put down) cuts: never slide through the house between the two snapshots
+      const last = v.track.s[v.track.s.length - 1];
+      if (v.tp !== s.tp && last && Math.hypot(last.p[0] - s.p[0], last.p[1] - s.p[1], last.p[2] - s.p[2]) > 0.5) v.track.s.length = 0;
+      v.tp = s.tp;
+      v.track.push(t, s.p, [s.yaw]);
+    }
     for (const p of props) {
       let v = this.props.get(p[0]);
       if (!v) {

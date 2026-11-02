@@ -189,7 +189,9 @@ export class CharMotion {
         if (rayDist(this.world, [this.pos[0] + dx * c.radius, this.pos[1] + 0.05, this.pos[2] + dz * c.radius], DOWN, 0.12) <= 0.1) { sx += dx; sz += dz; }
       }
       const l = Math.hypot(sx, sz);
-      if (l > 0.5) { px = -(sx / l) * 1.5 * dt; pz = -(sz / l) * 1.5 * dt; want.x += px; want.z += pz; } // supported on both sides (chair posts): stay
+      // (supported on both sides, chair posts: stay. Walking toward the support is climbing onto it, the laundry basket's
+      // edge: no nudge back, or it jitters at the foot of the step)
+      if (l > 0.5 && mx * sx + mz * sz <= 0) { px = -(sx / l) * 1.5 * dt; pz = -(sz / l) * 1.5 * dt; want.x += px; want.z += pz; }
     }
     this.ctrl.computeColliderMovement(this.collider, want, RAPIER.QueryFilterFlags.EXCLUDE_SENSORS, CHAR_QUERY[this.role]);
     const m = this.ctrl.computedMovement();

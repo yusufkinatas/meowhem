@@ -51,7 +51,7 @@ export const CFG = {
   interact: { range: 1.2, cleanRange: 1.15, sitBlockRange: 0.55 },
   meow: { spamCount: 4, spamWindow: 5, spamRange: 4, cagePitch: 0.96, cagePitchMin: 0.75 },
   // v2 sitter verbs + cat moves
-  toss: { fwd: 4.5, up: 3.2, pitchMin: -10, pitchMax: 30, pitchUp: 1.5, stun: 0.3, noLoaf: 4, bounce: 2.5, anim: 0.4, maxAir: 3 },
+  toss: { fwd: 4.5, up: 3.2, pitchMin: -60, pitchMax: 45, pitchUp: 2.25, stun: 0.3, noLoaf: 4, bounce: 2.5, anim: 0.4, maxAir: 3 },
   slip: { speed: 4.0, range: 0.35, time: 1.2, immune: 4, launchFwd: 2.5, launchUp: 3.5, smear: 1.3 },
   clap: { range: 6, anim: 0.5, shock: 0.5 },
   // tapSpeed: the spec says 0.4 m/s for a 4-5 cm slide, but prop friction stops 0.4 after ~1 cm, 0.85 gives ~4.5 cm
@@ -64,14 +64,11 @@ export const CFG = {
   /** QA: everything above is tuned for 6:00. Mess and disaster points scale by (360 / round seconds) ^ short|long, the clutter
    *  ramp by the length, so 3 and 9 minute rounds stay a contest (all-bot House Cat without it: 3:00 0/12, 9:00 11/12 cat wins) */
   roundLength: { short: 0.9, long: 0.4 },
-  /** TPS camera (src/client/camera.ts). dist: boom length, height: pivot above the feet, shoulder: pivot shift to the right, fov: vertical degrees */
+  /** first-person camera (src/client/camera.ts). eye: height above the feet on the capsule axis, fov: vertical degrees */
   camera: {
-    ceiling: 2.6, // the house's ceiling height: looking down sinks the pivot / shortens the boom under it
     sens: 0.0022, // radians per mouse pixel
-    cat: { dist: 1.6, height: 0.5, shoulder: 0, fov: 68 }, // centred: the cat is small and there is no crosshair
-    sitter: { dist: 2.1, height: 1.4, shoulder: 0.7, fov: 62 }, // over the right shoulder, crosshair clear of the head, head to toe in the lower left
-    carried: { dist: 2.5, height: 0.25, shoulder: 0, fov: 66 }, // my cat dangling from the sitter's hand: the sitter is in the shot too
-    holding: { dist: 2.4, height: 1.4, shoulder: 0.75, fov: 64 }, // sitter holding a cat at arm's length
+    cat: { eye: 0.3, caged: 0.2, fov: 72 },
+    sitter: { eye: 1.55, fov: 70 },
   },
   /** ADDENDUM §3.2 rows, retuned in QA from headless all-bot rounds (see design/REQUESTS.md). Indexed by cat count (bots included), fixed at round start. Index 0 unused. */
   scale: [

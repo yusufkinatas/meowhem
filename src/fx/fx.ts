@@ -291,6 +291,8 @@ function textTex(text: string, color: string): { tex: THREE.CanvasTexture; aspec
 // ================================================================ engine
 interface Inst {
   at: THREE.Vector3; off: THREE.Vector3; follow: THREE.Object3D | null;
+  /** follow only forward motion along this direction (a spray cloud: not dragged sideways by a strafing sitter) */
+  along: THREE.Vector3 | null;
   t: number; dur: number; live: number; s: number; acc: number; acc2: number; ox: number; oy: number; n: number;
   tick: ((f: Inst, dt: number) => void) | null;
 }
@@ -385,7 +387,7 @@ export function createFx(scene: THREE.Scene): FxApi {
   }
 
   function newInst(pos: THREE.Vector3, o: FxOptions): Inst {
-    const f: Inst = { at: pos.clone(), off: new THREE.Vector3(), follow: o.follow ?? null, t: 0, dur: 0, live: 0, s: o.scale ?? 1, acc: 0, acc2: 0, ox: 0, oy: 0, n: 0, tick: null };
+    const f: Inst = { at: pos.clone(), off: new THREE.Vector3(), follow: o.follow ?? null, along: null, t: 0, dur: 0, live: 0, s: o.scale ?? 1, acc: 0, acc2: 0, ox: 0, oy: 0, n: 0, tick: null };
     if (f.follow) {
       f.follow.updateWorldMatrix(true, false);
       f.off.copy(pos).sub(f.follow.getWorldPosition(tmpV));
@@ -505,7 +507,7 @@ export function createFx(scene: THREE.Scene): FxApi {
       const s = f.s, c = o.color ?? '#9ddcff', d = o.dir;
       emit(f, art.ripple(c), { y: 0.01, size: 0.14 * s, grow: 6, life: 0.6, out: 0.45, shrink: false }, true);
       emit(f, art.ripple(c), { y: 0.01, size: 0.12 * s, grow: 4, life: 0.5, out: 0.35, shrink: false, delay: 0.12 }, true);
-      for (let i = 0; i < 6; i++) {
+      for (let i = 0; i < (o.own ? 0 : 6); i++) { // (mine: no puffs, discs filling the view from 0.1 m)
         const a = (i / 6) * TAU;
         puff(f, '#e6f6ff', { x: Math.cos(a) * 0.07 * s, z: Math.sin(a) * 0.07 * s, y: 0.05 * s, vx: Math.cos(a) * 0.9 * s, vz: Math.sin(a) * 0.9 * s, vy: R(0.6, 1.2) * s,
           drag: 5, size: R(0.1, 0.14) * s, grow: 1.6, life: R(0.3, 0.4), pop: 0.06, out: 0.2 }, '#4f9fd6');
@@ -519,7 +521,8 @@ export function createFx(scene: THREE.Scene): FxApi {
     spray(f, o) {
       const s = f.s, d = (o.dir ? o.dir.clone() : new THREE.Vector3(0, 0, 1)).normalize();
       const fill = o.color ?? '#eaf8ff', line = '#5aa6d8', v = new THREE.Vector3();
-      puff(f, fill, { size: 0.12 * s, grow: 1.6, life: 0.18, pop: 0.05, out: 0.1 }, line, true); // nozzle pff
+      f.along = d;
+      puff(f, fill, { size: (o.own ? 0.025 : 0.12) * s, grow: 1.6, life: 0.18, pop: 0.05, out: 0.1 }, line, true); // nozzle pff (mine: 0.4 m from the eye)
       every(f, 0.22, 0.006, (f) => {
         cone(d, 0.2, v);
         const sp = R(6.5, 9.5) * s;
@@ -664,7 +667,10 @@ export function createFx(scene: THREE.Scene): FxApi {
       back.set(-right.z, 0, right.x); // horizontal, toward the camera
       for (let i = insts.length - 1; i >= 0; i--) {
         const f = insts[i];
-        if (f.follow) f.follow.getWorldPosition(f.at).add(f.off);
+        if (f.follow) {
+          f.follow.getWorldPosition(tmpV).add(f.off);
+          if (f.along) f.at.addScaledVector(f.along, Math.max(0, tmpV.sub(f.at).dot(f.along))); else f.at.copy(tmpV);
+        }
         f.t += dt;
         f.tick?.(f, dt);
         if (f.t >= f.dur && f.live <= 0) insts.splice(i, 1);

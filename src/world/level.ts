@@ -515,7 +515,6 @@ export function buildHouse(): LevelData {
   // raised metal frame (BED_ADD): duvet top 0.72, pillows 0.86, headboard 0.99, open underside 0.484 for the cats
   const BT = 0.72, BU = BED_CUT + BED_ADD;
   put('bed', -7.875, -3.4, toE, {
-    ref: 'bed',
     prep: (g) => raiseFrame(g, 'Wood', BED_CUT, BED_ADD),
     box: [[-0.815, BU, -0.98, 0.815, BT, 1.05, 'soft'], [-0.7, BU, -0.98, -0.12, 0.85, -0.66, 'soft'], [0.02, BU, -0.98, 0.78, 0.85, -0.66, 'soft'],
       [-0.815, BU, -1.05, 0.815, 0.99, -0.98], [-0.815, 0, -1.05, 0.815, 0.47, 1.05, 'catOnly'],

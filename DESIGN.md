@@ -1,6 +1,6 @@
 # MEOWHEM — design + architecture (v1)
 
-A browser party game. One **Catsitter** keeps a house tidy until the owners get home. Up to **four Cats** turn it into a crime scene. Third-person. Inspired by *Who's Your Daddy* (1 caretaker vs chaos agent, hazards, a clock), with the balance problem fixed: the sitter cannot win by stalling, because mess accumulates on its own.
+A browser party game. One **Catsitter** keeps a house tidy until the owners get home. Up to **four Cats** turn it into a crime scene. First-person. Inspired by *Who's Your Daddy* (1 caretaker vs chaos agent, hazards, a clock), with the balance problem fixed: the sitter cannot win by stalling, because mess accumulates on its own.
 
 Read this whole file before writing code. `src/shared/contracts.ts` is the binding interface between modules. `src/shared/toon.ts` is the shared look. `src/shared/propDefs.ts` holds prop physics + mess weights.
 
@@ -24,7 +24,7 @@ Read this whole file before writing code. `src/shared/contracts.ts` is the bindi
 
 ## 3. Roles and controls
 
-Desktop, keyboard + mouse, pointer lock, third-person camera with wall collision.
+Desktop, keyboard + mouse, pointer lock, first-person camera for both roles (the eye rides the character's collision capsule).
 
 | Key | Cat | Sitter |
 |---|---|---|

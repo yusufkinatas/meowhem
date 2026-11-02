@@ -75,6 +75,8 @@ export function loadAssets(onProgress?: (p01: number) => void): Promise<void> {
 export const hasModel = (key: string): boolean => models.has(key);
 export const modelInfo = (key: string): ManifestEntry | undefined => manifest[key];
 export const getClips = (key: string): THREE.AnimationClip[] => models.get(key)?.clips ?? [];
+/** every loaded model's template (clones share its materials): for shader pre-compiles */
+export const modelTemplates = (): THREE.Object3D[] => [...models.values()].map((m) => m.template);
 
 /** A fresh instance in meters facing +Z. Throws for unknown keys: check hasModel() first for optional assets. */
 export function cloneModel(key: string): THREE.Group {
@@ -102,6 +104,9 @@ function prepare(e: ManifestEntry, scene: THREE.Group, clips: THREE.AnimationCli
   template.add(fix);
 
   let skinned = false;
+  // flat floor mess: its shadow is invisible, its shadow-pass draw call is not (props keep theirs: from the
+  // cat's 0.3 m eye a floor toy without a contact shadow floats)
+  const tiny = e.category === 'mess' && e.size[1] < 0.25;
   scene.traverse((o) => {
     const mesh = o as THREE.Mesh;
     if (!mesh.isMesh) return;
@@ -109,7 +114,7 @@ function prepare(e: ManifestEntry, scene: THREE.Group, clips: THREE.AnimationCli
     const mats = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
     const out = mats.map((mat) => material(e, mat as THREE.MeshStandardMaterial));
     mesh.material = Array.isArray(mesh.material) ? out : out[0];
-    mesh.castShadow = !out.some((m) => m.transparent);
+    mesh.castShadow = !tiny && !out.some((m) => m.transparent);
     mesh.receiveShadow = true;
   });
   return { template, clips, skinned };
