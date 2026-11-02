@@ -12,7 +12,7 @@ import type { CatAccessory, CatAnim, CatFace, CatLook, CatModelApi, CatVisualSta
 import { cloneModel, hasModel, modelInfo } from '../assets/loader';
 import { BODY_Y, EAR_PIVOT, H, LEG_POS, TAIL_ELEV, TAIL_JOINTS, TAIL_ROOT, catGeometry, furPaint } from './cat/fur';
 import { EYE, MOUTH, createFaceMaterial, type FaceUniforms, type MouthName } from './cat/face';
-import { ACCESSORIES, accessoryFor, collarFor, preloadAccessories } from './cat/accessories';
+import { ACCESSORIES, accessoryFor, accessoryHugs, accessoryLow, collarFor, preloadAccessories } from './cat/accessories';
 import { OUTLINE_COLOR, gradientMap } from '../shared/toon';
 
 /** accessories this model actually supports (menus show only these) */
@@ -20,6 +20,10 @@ export const CAT_ACCESSORIES: CatAccessory[] = ['none', ...ACCESSORIES];
 
 const CY = BODY_Y + H;          // cube center height (model units)
 const S_DEFAULT = 0.263159;
+/** caged loaf scale (chonk 0) and how much more it shrinks at chonk 1: keeps every vertex within 0.17 m of the root */
+const CAGE_FIT = 0.62, CAGE_CHONK = 0.25;
+/** held in a vet cone: turned side-on in the hand (rad, + = face to the sitter's right) */
+const CONE_HOLD_YAW = Math.PI / 2;
 
 // ---------------------------------------------------------------- pose channels
 const PX = 0, PY = 1, PZ = 2, PRX = 3, PRY = 4, PRZ = 5;
@@ -35,9 +39,19 @@ const leg = (i: number, k: number) => LEG0 + i * 5 + k;
 
 // tail presets: [p0, y0, p1, y1, p2, y2, p3, y3] (pitch deltas from the modeled hook; elevations add up along the chain)
 type Tail = readonly number[];
-const TAIL_STREAM: Tail = [-0.6, 0, -0.43, 0, -0.81, 0, -0.9, 0];
+/**
+ * A preset from absolute segment elevations (rad above the backward horizontal, as if no yaw) + per-bone yaws.
+ * Rule of thumb for the chase camera (behind and ~15 deg above): a segment pointing back at 0..0.6 rad points at
+ * the lens and reads as a ring on the cat's bum, so every preset rises steeply, droops low or swings sideways.
+ */
+const tailAbs = (e: number[], y: number[]): Tail => e.flatMap((v, j) => [(v - TAIL_ELEV[j]) - (j ? e[j - 1] - TAIL_ELEV[j - 1] : 0), y[j]]);
+/** default: a stalk straight up from the bum, the tip hooks over to one side: a question mark from behind, a hook from the side */
+const TAIL_HAPPY = tailAbs([1.2, 1.55, 1.9, 2.55], [0, 0, 0.85, 0.45]);
+/** zoomies flag: up and back in an arc */
+const TAIL_STREAM = tailAbs([0.8, 1.05, 1.25, 1.55], [0, 0, 0.2, 0.25]);
 const TAIL_UP: Tail = [0.83, 0, -0.43, 0, -0.81, 0, -0.97, 0];
-const TAIL_LOW: Tail = [-1.0, 0, -0.63, 0, -0.91, 0, -1.02, 0];
+/** droops to the floor and the tip sweeps out to one side along it */
+const TAIL_LOW = tailAbs([-0.8, -1.2, -0.5, -0.1], [0.45, 0, 0.4, 0.4]);
 const TAIL_SIT: Tail = [-0.77, 1.25, -0.43, 0, -0.11, 0.7, -1.12, 0.7];
 const TAIL_LOAF: Tail = [-1.45, 1.35, -0.43, 0, 0.02, 0.75, -1.12, 0.75];
 const TAIL_TUCK: Tail = [-2.1, 0, 0.35, 0, 0.45, 0, 0.2, 0];
@@ -48,6 +62,7 @@ function rest(o: Float32Array) {
   o.fill(0);
   o[BSX] = o[BSY] = o[BSZ] = 1;
   for (let i = 0; i < 4; i++) o[leg(i, LLN)] = 1;
+  tail(o, TAIL_HAPPY);
   o[TW] = 0.18; o[TF] = 0.5;
 }
 
@@ -70,6 +85,25 @@ function outline(puff: { value: number }): THREE.MeshBasicMaterial {
   return m;
 }
 
+/** cat fur: toon + catnip glints (the emissive only shows in thin diagonal bands that sweep up the body) */
+function shimmerFur(time: { value: number }): THREE.MeshToonMaterial {
+  const m = new THREE.MeshToonMaterial({ color: 0xffffff, gradientMap: gradientMap() });
+  m.onBeforeCompile = (sh) => {
+    sh.uniforms.uShimT = time;
+    sh.vertexShader = sh.vertexShader
+      .replace('#include <common>', '#include <common>\nvarying vec3 vShimP;')
+      .replace('#include <project_vertex>', '#include <project_vertex>\nvShimP = (modelMatrix * vec4(transformed, 1.0)).xyz;');
+    sh.fragmentShader = sh.fragmentShader
+      .replace('#include <common>', '#include <common>\nvarying vec3 vShimP;\nuniform float uShimT;')
+      .replace('#include <emissivemap_fragment>', `#include <emissivemap_fragment>
+        float shim = 0.5 + 0.5 * sin(dot(vShimP, vec3(24.0, 40.0, 16.0)) - uShimT * 9.0);
+        shim *= shim * shim; shim *= shim;
+        totalEmissiveRadiance *= 0.1 + 2.2 * shim;`);
+  };
+  m.customProgramCacheKey = () => 'meowhem-cat-fur-shimmer';
+  return m;
+}
+
 // ---------------------------------------------------------------- small math
 const clamp = THREE.MathUtils.clamp;
 const lerp = THREE.MathUtils.lerp;
@@ -77,6 +111,7 @@ const damp = (a: number, b: number, k: number, dt: number) => a + (b - a) * (1 -
 const sstep = (x: number) => { const t = clamp(x, 0, 1); return t * t * (3 - 2 * t); };
 const wrapPi = (a: number) => { while (a > Math.PI) a -= Math.PI * 2; while (a < -Math.PI) a += Math.PI * 2; return a; };
 const _v = new THREE.Vector3(), _w = new THREE.Vector3();
+const _box = new THREE.Box3();
 const TAIL_STIFF = [260, 170, 120, 90];
 type Pair = 'lid' | 'bot' | 'pw' | 'ph' | 'browAng' | 'browH';
 const both = (f: FaceT, k: Pair, v: number) => { f[k][0] = v; f[k][1] = v; };
@@ -152,6 +187,7 @@ class Cat implements CatModelApi {
   private boneRest: number[] = [];
   private furMat: THREE.MeshToonMaterial;
   private puffU = { value: 0 };
+  private shimT = { value: 0 };
   private outlineMat = outline(this.puffU);
   private face: { mat: THREE.MeshToonMaterial; u: FaceUniforms };
   private accSlot = new THREE.Group();
@@ -177,7 +213,7 @@ class Cat implements CatModelApi {
   private idleGroom = false;
   private sq = 0; private sqv = 0;
   private wasGrounded = true; private airVy = 0;
-  private tossVy0 = 1; private flip = 0; private wasTossed = false;
+  private flip = 0; private flipOn = false; private wasTossed = false; private tossEnd = -9;
   private lastYaw = 0; private yawRate = 0;
   private tailX = new Float32Array(4); private tailVX = new Float32Array(4);
   private tailY = new Float32Array(4); private tailVY = new Float32Array(4);
@@ -185,11 +221,18 @@ class Cat implements CatModelApi {
   private earS = new Float32Array(2); private earVS = new Float32Array(2);
   private earO = new Float32Array(2);
   private twitchT = 2 + Math.random() * 3;
+  /** which way this cat's tail hooks / wraps (mirrors every preset yaw) */
+  private tailSide = Math.random() < 0.5 ? 1 : -1;
   private headYaw = 0; private headPitch = 0;
   private lookYaw = 0; private lookPitch = 0; private hasLook = 0;
   private saccT = 0; private saccX = 0; private saccY = 0;
-  private wet = 0; private puff = 0; private high = 0; private cageK = 1;
+  private wet = 0; private puff = 0; private high = 0; private cageW = 0;
   private hue = 0;
+  /** chin lift that keeps a vet cone's rim out of the floor */
+  private coneLift = 0;
+  /** vertical squash that fits the cat under a low ceiling (1 = none) */
+  private fitY = 1;
+  private meowK = 0;
   // face
   private ft = newFaceT();
   private fc = newFaceT();
@@ -204,7 +247,7 @@ class Cat implements CatModelApi {
     const info = modelInfo('cat');
     if (info) this.S = info.scale[0];
     const g = catGeometry();
-    this.furMat = new THREE.MeshToonMaterial({ color: 0xffffff, gradientMap: gradientMap() });
+    this.furMat = shimmerFur(this.shimT);
     this.face = createFaceMaterial();
 
     // hierarchy
@@ -213,6 +256,7 @@ class Cat implements CatModelApi {
     this.fix.position.set(...((info?.offset ?? [0, 0, 0.0528]) as [number, number, number]));
     this.root.add(this.fix);
     this.fix.add(this.pose);
+    this.pose.rotation.order = 'YXZ'; // yaw outermost: a held cat turned in the hand still pitches / dangles in the world
     this.pose.add(this.poseInner);
     this.poseInner.position.y = -CY;
     this.poseInner.add(this.body);
@@ -305,7 +349,8 @@ class Cat implements CatModelApi {
     // the body widens with chonk; face, ears and hats keep their shape (chubby cheeks instead of stretched eyes)
     const keep = (1 + 0.08 * this.chonk) / (1 + 0.32 * this.chonk);
     this.face.u.uAspect.value = 1 / keep; // the decal stretches with the cube, the drawing doesn't
-    this.accSlot.scale.x = keep;
+    this.accSlot.scale.x = accessoryHugs(look.accessory) ? 1 : keep;
+    this.scruffAnchor.position.z = accessoryHugs(look.accessory) ? -0.62 : -0.3;
     for (const e of this.ears) e.scale.x = keep;
     const u = this.face.u;
     u.uIris.value.set(look.eyeColor || '#f2c14e');
@@ -401,13 +446,12 @@ class Cat implements CatModelApi {
     this.at += dt;
     this.fadeT += dt;
 
-    // tossed flip bookkeeping
-    if (a === 'tossed' && !this.wasTossed) { this.tossVy0 = Math.max(1.5, s.vy); this.flip = 0; }
-    if (a === 'tossed') {
-      this.tossVy0 = Math.max(this.tossVy0, s.vy);
-      const ph = clamp((this.tossVy0 - s.vy) / (2 * this.tossVy0), 0, 1);
-      this.flip = Math.max(this.flip, sstep(ph) * Math.PI * 2);
-    } else this.flip = 0;
+    // tossed: one forward somersault timed from the throw, done before the ~0.7 s arc lands (s.vy is no clock:
+    // for other players' cats it is estimated from positions and reads -5 m/s on the frame the cat leaves the hand).
+    // The bounce off a soft landing does not flip again.
+    if (a === 'tossed' && !this.wasTossed) this.flipOn = this.t - this.tossEnd > 0.5;
+    if (a !== 'tossed' && this.wasTossed) this.tossEnd = this.t;
+    this.flip = a === 'tossed' && this.flipOn ? sstep(this.at / 0.6) * Math.PI * 2 : 0;
     this.wasTossed = a === 'tossed';
 
     // gait phase
@@ -501,7 +545,7 @@ class Cat implements CatModelApi {
             o[BY] += 0.08; o[leg(1, LLF)] = 0; o[leg(1, LFW)] = 0.15;
             o[leg(1, LRX)] = -1.5 + Math.sin(t * 22) * 0.45 * wig;
             o[BRY] = Math.sin(t * 14) * 0.08 * wig;
-            o[TW] = 0.5; o[TF] = 4;
+            o[TW] = 0.2; o[TF] = 4; // annoyed flicks, kept inside the basket
           }
         }
         break;
@@ -513,7 +557,7 @@ class Cat implements CatModelApi {
         for (let i = 0; i < 4; i++) o[leg(i, LLN)] = 0.65;
         o[leg(2, LLN)] = o[leg(3, LLN)] = 0.8;
         o[EAR0] = o[EAR0 + 2] = -0.25;
-        tail(o, TAIL_LOW, 0.7); o[TW] = 0.06 + c * 0.1; o[TF] = 3 + c * 6;
+        tail(o, TAIL_LOW); o[TW] = 0.06 + c * 0.1; o[TF] = 3 + c * 6;
         if (c > 0) {
           // the butt wiggle
           const wf = 7 + c * 6;
@@ -572,7 +616,7 @@ class Cat implements CatModelApi {
         o[HRX] = 0.12 + Math.max(0, Math.sin(t * 11)) * 0.08;
         o[leg(0, LRX)] = o[leg(1, LRX)] = -0.45;
         o[leg(2, LRX)] = o[leg(3, LRX)] = -0.45;
-        tail(o, TAIL_LOW, 0.4); o[TW] = 0.4; o[TF] = 1.2;
+        o[TW] = 0.4; o[TF] = 1.2;
         break;
       }
       case 'type': {
@@ -609,7 +653,7 @@ class Cat implements CatModelApi {
         const door = a === 'hangDoor';
         o[PRX] = door ? -1.5 : -1.42;
         o[PY] = door ? 1.95 + Math.sin(t * 2.2) * 0.04 : 1.0 + Math.sin(t * 6) * 0.06;
-        o[PZ] = door ? 0.25 : 0.15;
+        o[PZ] = door ? 0.11 : 0.15; // door: front paws touch the panel, vet cone clear of it, with the root 0.35 m from the panel line
         const k = Math.sin(t * (door ? 7 : 6));
         o[leg(0, LRX)] = -1.55 + (door ? 0 : k * 0.35);
         o[leg(1, LRX)] = -1.55 - (door ? 0 : k * 0.35);
@@ -640,7 +684,7 @@ class Cat implements CatModelApi {
         o[PZ] = h * 0.05;
         for (let i = 0; i < 4; i++) o[leg(i, LLN)] = 0.85;
         o[EAR0] = o[EAR0 + 2] = 0.3 * h;
-        tail(o, TAIL_LOW, 0.8 - h * 0.4); o[TW] = 0.05;
+        tail(o, TAIL_LOW, 1 - h * 0.25); o[TW] = 0.05;
         break;
       }
       case 'grabbed': case 'noodle': {
@@ -649,7 +693,8 @@ class Cat implements CatModelApi {
         const sway = Math.sin(t * 2.4);
         o[PRX] = 0.36 + sway * 0.03 + Math.sin(t * 17) * 0.1 * wig;
         o[PRZ] = Math.sin(t * 1.7) * (noodle ? 0.04 : 0.07) + Math.sin(t * 11) * 0.2 * wig;
-        o[PRY] = Math.sin(t * 7) * 0.35 * wig;
+        // a cat in a vet cone is held side-on, gripped behind the cone (scruffAnchor): the forearm stays out of the funnel
+        o[PRY] = Math.sin(t * 7) * 0.35 * wig + (accessoryHugs(this.accKey) ? CONE_HOLD_YAW : 0);
         o[BSY] = noodle ? 1.25 : 1.1; o[BSX] = noodle ? 0.86 : 0.96; o[BSZ] = noodle ? 0.88 : 0.96;
         // legs straight down in the world, loose
         for (let i = 0; i < 4; i++) {
@@ -683,7 +728,7 @@ class Cat implements CatModelApi {
         o[BSY] = 0.94; o[BY] = -0.03;
         for (let i = 0; i < 4; i++) o[leg(i, LSP)] = 0.12;
         o[EAR0 + 1] = o[EAR0 + 3] = 0.5;
-        tail(o, TAIL_LOW, 0.6); o[TW] = shake ? 0.6 : 0.05; o[TF] = 6;
+        tail(o, TAIL_LOW); o[TW] = shake ? 0.6 : 0.05; o[TF] = 6;
         break;
       }
       case 'fight': {
@@ -721,15 +766,15 @@ class Cat implements CatModelApi {
   private groomPose(o: Float32Array) {
     const ph = (this.at % 1.5) / 1.5;
     if (ph < 0.6) {
-      // raise the paw to the mouth and lick it
-      const k = sstep(ph / 0.15);
+      // raise the paw to the mouth and lick it (only the first cycle starts from the floor: the wipe ends with the paw up)
+      const k = this.at < 1.5 ? sstep(ph / 0.15) : 1;
       o[leg(0, LRX)] = lerp(o[leg(0, LRX)], -1.5, k); o[leg(0, LFW)] = 0.3 * k; o[leg(0, LLF)] = 0.3 * k; o[leg(0, LSP)] = -0.3 * k; o[leg(0, LLN)] = 1 + 0.15 * k;
       o[HRX] += 0.22 * k + Math.sin(this.t * 14) * 0.035 * k; o[HRZ] = 0.2 * k; o[HRY] = 0.18 * k;
     } else {
       // one wipe over the face
       const k = Math.sin((ph - 0.6) / 0.4 * Math.PI);
       o[leg(0, LRX)] = -1.5 - k * 0.5; o[leg(0, LFW)] = 0.3; o[leg(0, LLF)] = 0.3 + k * 0.3; o[leg(0, LSP)] = -0.3 - k * 0.25; o[leg(0, LLN)] = 1.15;
-      o[HRX] += 0.3 * k; o[HRZ] = 0.2 + k * 0.1; o[HRY] = 0.18 + 0.15 * k;
+      o[HRX] += 0.22 + 0.1 * k; o[HRZ] = 0.2 + k * 0.1; o[HRY] = 0.18 + 0.15 * k;
       o[EAR0] = k * 0.45;
     }
     o[TW] = 0.08;
@@ -757,7 +802,7 @@ class Cat implements CatModelApi {
     if (wt > 0.001) {
       o[BSX] *= 1 - 0.14 * wt; o[BSZ] *= 1 - 0.1 * wt;
       o[EAR0 + 1] += 0.85 * wt; o[EAR0 + 3] += 0.85 * wt; o[EAR0] += 0.25 * wt; o[EAR0 + 2] += 0.25 * wt;
-      tail(o, TAIL_LOW, wt * 0.7); o[TW] *= 1 - 0.5 * wt;
+      tail(o, TAIL_LOW, wt); o[TW] *= 1 - 0.5 * wt;
       o[HRX] += 0.08 * wt;
     }
     // catnip: wobble
@@ -766,9 +811,12 @@ class Cat implements CatModelApi {
       o[HRX] += Math.sin(t * 1.3) * 0.12 * this.high;
       o[HRZ] += Math.sin(t * 1.7 + 1) * 0.15 * this.high;
     }
+    // low ceiling: the tail goes flat before anything else
+    if (s.ceiling !== undefined) { const k = clamp((0.75 - s.ceiling) / 0.2, 0, 1); if (k > 0) tail(o, TAIL_LOW, k); }
     if (s.dizzy) { o[HRZ] += Math.sin(t * 6) * 0.12; o[HRX] += Math.cos(t * 6) * 0.08; }
-    // talk: meow lifts the head with a tilt
-    if (s.talk === 'meow' || s.talk === 'chirp') { o[HRX] -= 0.18; o[HRZ] += 0.14; o[BSY] *= 1.04; }
+    // talk: meow lifts the head with a tilt (eased in and out, the head never snaps)
+    this.meowK = damp(this.meowK, s.talk === 'meow' || s.talk === 'chirp' ? 1 : 0, 20, dt);
+    if (this.meowK > 0.001) { o[HRX] -= 0.18 * this.meowK; o[HRZ] += 0.14 * this.meowK; o[BSY] *= 1 + 0.04 * this.meowK; }
     if (s.talk === 'purr') o[BSY] *= 1 + Math.sin(t * 50) * 0.004;
   }
 
@@ -780,10 +828,14 @@ class Cat implements CatModelApi {
     const legLen = 1 - 0.22 * ch;
     const puffScale = 1 + 0.12 * this.puff;
     const wetScale = 1 - 0.08 * this.wet;
-    // the carrier basket is 0.36 m tall and 0.46 m deep: a caged cat squishes into a compact loaf that fits any way round
-    this.cageK = damp(this.cageK, this.anim === 'caged' ? 0.76 : 1, 10, dt);
-    const k = puffScale * wetScale * this.cageK;
-    this.pose.position.set(o[PX], o[PY] + CY, o[PZ]);
+    // the carrier basket is 0.39 m deep inside the wicker and the sim parks the root at its centre, facing any way: a caged
+    // cat centres its loaf on the root and squishes to fit (chonk included). It snaps small going in (no frames poking
+    // through the wicker) and grows back coming out; hats and the cone come off (they stuck out of the lid and walls).
+    const caged = this.anim === 'caged';
+    this.cageW = caged ? 1 : damp(this.cageW, 0, 10, dt);
+    this.accSlot.visible = !caged;
+    const k = puffScale * wetScale * lerp(1, CAGE_FIT / (1 + CAGE_CHONK * ch), this.cageW);
+    this.pose.position.set(o[PX], o[PY] + CY, o[PZ] - this.cageW * this.fix.position.z / this.S);
     this.pose.rotation.set(o[PRX], o[PRY], o[PRZ]);
     this.pose.scale.setScalar(k);
     this.body.position.set(0, o[BY] - (loose ? 0 : 0.3 * (1 - legLen)), o[BZ]);
@@ -804,7 +856,7 @@ class Cat implements CatModelApi {
     const lw = allowLook ? this.hasLook : 0;
     this.headYaw = damp(this.headYaw, clamp(this.lookYaw, -0.55, 0.55) * lw, 10, dt);
     this.headPitch = damp(this.headPitch, this.lookPitch * 0.6 * lw, 10, dt);
-    this.head.rotation.set(o[HRX] + this.headPitch, o[HRY] + this.headYaw, o[HRZ]);
+    this.head.rotation.set(o[HRX] + this.headPitch - this.coneLift, o[HRY] + this.headYaw, o[HRZ]);
 
     for (let i = 0; i < 4; i++) {
       const L = this.legs[i], base = LEG_POS[i];
@@ -835,7 +887,7 @@ class Cat implements CatModelApi {
     for (let j = 0; j < 4; j++) {
       const ph = t * Math.PI * 2 * wagF - j * 0.7;
       const tx = o[TB + j * 2];
-      const ty = o[TB + j * 2 + 1] + Math.sin(ph) * wagA * (0.6 + j * 0.25);
+      const ty = this.tailSide * o[TB + j * 2 + 1] + Math.sin(ph) * wagA * (0.6 + j * 0.25);
       const kk = TAIL_STIFF[j], d = 2 * Math.sqrt(kk) * 0.45;
       this.tailVX[j] += ((tx - this.tailX[j]) * kk - this.tailVX[j] * d) * dt;
       this.tailVY[j] += ((ty - this.tailY[j]) * kk - this.tailVY[j] * d - this.yawRate * (8 + j * 6)) * dt;
@@ -848,6 +900,26 @@ class Cat implements CatModelApi {
       this.bones[j].scale.set(j === 0 ? brush : 1, j === 0 ? brush : 1, 1);
     }
 
+    // low ceiling (under the bed, a table): squash the whole cat from the feet up until ears, hat, cone and tail clear it.
+    // Cats are liquid. Measured unsquashed (the squash is linear about the feet), down at once, back up eased.
+    let fit = 1;
+    if (s.ceiling !== undefined && !loose && !caged) {
+      this.root.updateMatrixWorld(true);
+      const y0 = this.root.matrixWorld.elements[13];
+      let top = -Infinity;
+      this.pose.traverseVisible((m) => {
+        const mm = m as THREE.Mesh;
+        if (!mm.isMesh || (m as THREE.SkinnedMesh).isSkinnedMesh) return;
+        if (!mm.geometry.boundingBox) mm.geometry.computeBoundingBox();
+        _box.copy(mm.geometry.boundingBox!).applyMatrix4(mm.matrixWorld);
+        if (_box.max.y > top) top = _box.max.y;
+      });
+      for (const b of this.bones) { b.getWorldPosition(_v); if (_v.y + 0.03 > top) top = _v.y + 0.03; }
+      fit = clamp((s.ceiling - 0.02) / Math.max(0.05, (top - y0) / this.fitY), 0.5, 1);
+    }
+    this.fitY = fit < this.fitY ? fit : damp(this.fitY, fit, 8, dt);
+    this.fix.scale.set(this.S, this.S * this.fitY, this.S);
+
     // ground contact: planted poses sit exactly on the floor (no floating, no paws or butt in the floor)
     this.root.updateMatrixWorld(true);
     let corr = 0;
@@ -856,12 +928,24 @@ class Cat implements CatModelApi {
       let m = Infinity;
       for (const L of this.legs) for (const p of PAW_PROBES) { _v.set(p[0], p[1], p[2]).applyMatrix4(L.matrixWorld); if (_v.y < m) m = _v.y; }
       for (const p of CUBE_PROBES) { _v.set(p[0], p[1], p[2]).applyMatrix4(this.cube.matrixWorld); if (_v.y < m) m = _v.y; }
-      corr = (y0 - m) / (this.S * this.root.scale.y);
+      corr = (y0 - m) / (this.fix.scale.y * this.root.scale.y);
       if (LIFT_ONLY.has(this.anim)) corr = Math.max(0, corr);
     }
     // out of the floor at once, settle down onto it quickly (no pop when a pose blends in)
     this.gOff = corr > this.gOff ? corr : damp(this.gOff, corr, 18, dt);
     this.pose.position.y += this.gOff;
+
+    // vet cone: lift the chin until the rim clears the floor (loaf, crouch, eat...), relax when it would anyway
+    const low = accessoryLow(this.accKey);
+    if (low) {
+      let below = -1;
+      if (s.grounded && !FREE.has(this.anim)) {
+        this.root.updateMatrixWorld(true);
+        const y0 = this.root.matrixWorld.elements[13];
+        for (const p of low) { _v.set(p[0], p[1], p[2]).applyMatrix4(this.head.matrixWorld); below = Math.max(below, (y0 + 0.004 - _v.y) / (this.fix.scale.y * this.root.scale.y)); }
+      }
+      this.coneLift = damp(this.coneLift, clamp(this.coneLift + below / 1.1, 0, 0.8), 14, dt);
+    } else this.coneLift = 0;
 
     // scruff pin: while held, the scruff stays put and the body hangs under it
     if (this.anim === 'grabbed' || this.anim === 'noodle') {
@@ -873,12 +957,14 @@ class Cat implements CatModelApi {
     }
 
     this.puffU.value = this.puff;
-    // materials: wet darkens, catnip pulses a rainbow tint
+    // materials: wet darkens, catnip sweeps rainbow glints over the coat
     this.baseColor.setRGB(1 - 0.38 * this.wet, 1 - 0.34 * this.wet, 1 - 0.22 * this.wet);
     this.furMat.color.copy(this.baseColor);
     if (this.high > 0.01) {
       this.hue = (this.hue + dt * 0.35) % 1;
-      this.furMat.emissive.setHSL(this.hue, 0.9, 0.5).multiplyScalar(0.22 * this.high * (0.6 + 0.4 * Math.sin(t * 5)));
+      // the shader turns this into thin moving bands (shimmerFur): glints that show on a black cat, never a recoloured cat
+      this.furMat.emissive.setHSL(this.hue, 0.6, 0.5).multiplyScalar(0.14 * this.high);
+      this.shimT.value = t;
     } else this.furMat.emissive.setRGB(0, 0, 0);
   }
 

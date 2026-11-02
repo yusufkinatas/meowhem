@@ -154,9 +154,9 @@
   "author": "CreativeTrio",
   "sourceUrl": "https://poly.pizza/m/y5f363OS9C",
   "scale": [
-   0.677113,
-   0.677113,
-   0.677113
+   0.885455,
+   0.885455,
+   0.885455
   ],
   "rotation": [
    0,
@@ -167,12 +167,12 @@
   "offset": [
    0,
    0,
-   0.0017
+   0.0022
   ],
   "size": [
-   0.0842,
-   0.13,
-   0.0428
+   0.1101,
+   0.17,
+   0.056
   ],
   "material": "toon"
  },
@@ -215,9 +215,9 @@
   "author": "Isa Lousberg (Tiny Treats)",
   "sourceUrl": "https://github.com/TinyTreats-Game-Assets/Tiny-Treats-Homely-House-1.0",
   "scale": [
-   0.40874,
-   0.40874,
-   0.40874
+   0.510925,
+   0.510925,
+   0.510925
   ],
   "rotation": [
    0,
@@ -228,12 +228,12 @@
   "offset": [
    0,
    0,
-   -0.0203
+   -0.0253
   ],
   "size": [
-   0.3885,
-   0.24,
-   0.2899
+   0.4856,
+   0.3,
+   0.3623
   ],
   "material": "toon"
  },
@@ -245,9 +245,9 @@
   "author": "Isa Lousberg (Tiny Treats)",
   "sourceUrl": "https://opengameart.org/content/tiny-treats-baked-goods-set",
   "scale": [
-   0.333193,
-   0.333193,
-   0.333193
+   0.404591,
+   0.404591,
+   0.404591
   ],
   "rotation": [
    0,
@@ -257,13 +257,13 @@
   "origin": "feet",
   "offset": [
    0,
-   0.0008,
+   0.0009,
    0
   ],
   "size": [
-   0.1537,
-   0.1718,
-   0.28
+   0.1866,
+   0.2086,
+   0.34
   ],
   "material": "toon"
  },
@@ -305,9 +305,9 @@
   "author": "Isa Lousberg (Tiny Treats)",
   "sourceUrl": "https://github.com/TinyTreats-Game-Assets/Tiny-Treats-Bubbly-Bathroom-1.0",
   "scale": [
-   0.248144,
-   0.248144,
-   0.248144
+   0.322587,
+   0.322587,
+   0.322587
   ],
   "rotation": [
    0,
@@ -317,13 +317,13 @@
   "origin": "feet",
   "offset": [
    0,
-   0.0025,
-   -0.01
+   0.0032,
+   -0.0131
   ],
   "size": [
-   0.074,
-   0.1,
-   0.1044
+   0.0962,
+   0.13,
+   0.1358
   ],
   "material": "toon"
  },
@@ -395,9 +395,9 @@
   "author": "Isa Lousberg (Tiny Treats)",
   "sourceUrl": "https://tinytreats.itch.io/pleasant-picnic",
   "scale": [
-   0.550001,
-   0.550001,
-   0.550001
+   0.700001,
+   0.700001,
+   0.700001
   ],
   "rotation": [
    0,
@@ -411,9 +411,9 @@
    0
   ],
   "size": [
-   0.22,
-   0.1318,
-   0.22
+   0.28,
+   0.1678,
+   0.28
   ],
   "material": "toon"
  },
@@ -456,9 +456,9 @@
   "author": "Isa Lousberg (Tiny Treats)",
   "sourceUrl": "https://github.com/TinyTreats-Game-Assets/Tiny-Treats-Charming-Kitchen-1.0",
   "scale": [
-   0.369619,
-   0.369619,
-   0.369619
+   0.470424,
+   0.470424,
+   0.470424
   ],
   "rotation": [
    0,
@@ -467,14 +467,14 @@
   ],
   "origin": "feet",
   "offset": [
-   0.0101,
+   0.0129,
    0,
    0
   ],
   "size": [
-   0.3004,
-   0.22,
-   0.2218
+   0.3823,
+   0.28,
+   0.2823
   ],
   "material": "toon"
  },
@@ -516,9 +516,9 @@
   "author": "Isa Lousberg (Tiny Treats)",
   "sourceUrl": "https://github.com/TinyTreats-Game-Assets/Tiny-Treats-Charming-Kitchen-1.0",
   "scale": [
-   0.283815,
-   0.283815,
-   0.283815
+   0.349311,
+   0.349311,
+   0.349311
   ],
   "rotation": [
    0,
@@ -527,14 +527,14 @@
   ],
   "origin": "feet",
   "offset": [
-   -0.0087,
+   -0.0107,
    0,
    0
   ],
   "size": [
-   0.26,
-   0.1703,
-   0.1419
+   0.32,
+   0.2096,
+   0.1747
   ],
   "material": "toon"
  },
@@ -786,14 +786,14 @@
  "bed": {
   "file": "furniture/bed.glb",
   "category": "furniture",
-  "name": "bed_double_A",
+  "name": "Bed_King",
   "license": "CC0 1.0",
-  "author": "Kay Lousberg (KayKit)",
-  "sourceUrl": "https://github.com/KayKit-Game-Assets/KayKit-Furniture-Bits-1.0",
+  "author": "Quaternius",
+  "sourceUrl": "https://quaternius.com/packs/ultimatehomeinterior.html",
   "scale": [
-   0.7,
-   0.7,
-   0.7
+   0.00531263,
+   0.00531263,
+   0.00531263
   ],
   "rotation": [
    0,
@@ -807,11 +807,19 @@
    0
   ],
   "size": [
-   2.17,
-   0.7,
+   1.6279,
+   0.6453,
    2.1
   ],
-  "material": "toon"
+  "material": "toon",
+  "tint": {
+   "DarkRed": "#5d84ab",
+   "Red": "#7ea6ca",
+   "White": "#f6efe4",
+   "Grey": "#e7b45c",
+   "Wood": "#4b3b33"
+  },
+  "notes": "Raised in level.ts: only the Wood frame below 0.22 m stretches, the bedding moves up rigidly."
  },
  "bookshelf": {
   "file": "furniture/bookshelf.glb",
@@ -883,6 +891,41 @@
    "handleRight": "picnic_basket_handle_right"
   },
   "notes": "No free pet carrier exists; a lidded wicker basket (classic cat basket) stands in. Flip the two lid nodes for carrier.closed, wobble the root while a caged cat mashes."
+ },
+ "catBed": {
+  "file": "furniture/catBed.glb",
+  "category": "furniture",
+  "name": "Cat Bed",
+  "license": "CC-BY 3.0",
+  "author": "J-Toastie",
+  "sourceUrl": "https://poly.pizza/m/CYEBbzLl8J",
+  "scale": [
+   0.898236,
+   0.898236,
+   0.898236
+  ],
+  "rotation": [
+   0,
+   0,
+   0
+  ],
+  "origin": "feet",
+  "offset": [
+   -0.0006,
+   -0.0084,
+   0.0007
+  ],
+  "size": [
+   0.62,
+   0.1617,
+   0.5901
+  ],
+  "material": "toon",
+  "tint": {
+   "WhiteMaterial": "#d9a093",
+   "OtherMat": "#f3e3cf"
+  },
+  "notes": "Decor: the expensive cat bed nobody sleeps in (no nav surface on purpose)."
  },
  "catTree": {
   "file": "furniture/catTree.glb",
@@ -1532,14 +1575,14 @@
  "laundryBasket": {
   "file": "furniture/laundryBasket.glb",
   "category": "furniture",
-  "name": "picnic_basket_round",
+  "name": "basket_B",
   "license": "CC0 1.0",
   "author": "Isa Lousberg (Tiny Treats)",
-  "sourceUrl": "https://tinytreats.itch.io/pleasant-picnic",
+  "sourceUrl": "https://tinytreats.itch.io/bakery-interior",
   "scale": [
-   0.435379,
-   0.435379,
-   0.435379
+   0.6,
+   0.6,
+   0.6
   ],
   "rotation": [
    0,
@@ -1553,12 +1596,12 @@
    0
   ],
   "size": [
-   0.5277,
-   0.45,
-   0.4093
+   0.6,
+   0.18,
+   0.45
   ],
   "material": "toon",
-  "notes": "Wicker basket used as the laundry basket (laundry spot)."
+  "notes": "Open wicker tub with handle holes: the laundry basket, a `towels` stack sits in it (laundry spot)."
  },
  "litterBox": {
   "file": "furniture/litterBox.glb",
@@ -1798,6 +1841,36 @@
    2.6,
    0.03,
    1.8
+  ],
+  "material": "toon"
+ },
+ "rugOffice": {
+  "file": "furniture/rugOffice.glb",
+  "category": "furniture",
+  "name": "rug_rectangle_stripes_B",
+  "license": "CC0 1.0",
+  "author": "Kay Lousberg (KayKit)",
+  "sourceUrl": "https://github.com/KayKit-Game-Assets/KayKit-Furniture-Bits-1.0",
+  "scale": [
+   0.733333,
+   0.3,
+   0.75
+  ],
+  "rotation": [
+   0,
+   0,
+   0
+  ],
+  "origin": "feet",
+  "offset": [
+   0,
+   0,
+   0
+  ],
+  "size": [
+   2.2,
+   0.03,
+   1.5
   ],
   "material": "toon"
  },
@@ -2437,9 +2510,9 @@
   "author": "Kay Lousberg (KayKit)",
   "sourceUrl": "https://github.com/KayKit-Game-Assets/KayKit-Furniture-Bits-1.0",
   "scale": [
-   0.410959,
-   0.4,
-   0.192308
+   0.536986,
+   0.52,
+   0.253846
   ],
   "rotation": [
    0,
@@ -2448,20 +2521,20 @@
   ],
   "origin": "center",
   "offset": [
-   -0.0021,
+   -0.0027,
    0,
    0
   ],
   "size": [
-   0.15,
-   0.2,
-   0.05
+   0.196,
+   0.26,
+   0.066
   ],
   "material": "toon",
   "collider": [
-   0.15,
-   0.2,
-   0.04
+   0.196,
+   0.26,
+   0.066
   ]
  },
  "bowl": {
@@ -2472,9 +2545,9 @@
   "author": "Isa Lousberg (Tiny Treats)",
   "sourceUrl": "https://tinytreats.itch.io/pleasant-picnic",
   "scale": [
-   0.4,
-   0.4,
-   0.4
+   0.54,
+   0.54,
+   0.54
   ],
   "rotation": [
    0,
@@ -2484,19 +2557,19 @@
   "origin": "center",
   "offset": [
    0,
-   -0.0412,
+   -0.0556,
    0
   ],
   "size": [
-   0.16,
-   0.0823,
-   0.16
+   0.216,
+   0.1111,
+   0.216
   ],
   "material": "toon",
   "collider": [
-   0.16,
-   0.07,
-   0.16
+   0.216,
+   0.11,
+   0.216
   ]
  },
  "candle": {
@@ -2507,9 +2580,9 @@
   "author": "Isa Lousberg (Tiny Treats)",
   "sourceUrl": "https://github.com/TinyTreats-Game-Assets/Tiny-Treats-Bubbly-Bathroom-1.0",
   "scale": [
-   0.324164,
-   0.324164,
-   0.324164
+   0.437622,
+   0.437622,
+   0.437622
   ],
   "rotation": [
    0,
@@ -2519,19 +2592,19 @@
   "origin": "center",
   "offset": [
    0,
-   -0.06,
+   -0.081,
    0
   ],
   "size": [
-   0.0934,
-   0.12,
-   0.0934
+   0.126,
+   0.162,
+   0.126
   ],
   "material": "toon",
   "collider": [
-   0.06,
-   0.12,
-   0.06
+   0.126,
+   0.162,
+   0.126
   ]
  },
  "cerealBox": {
@@ -2542,9 +2615,9 @@
   "author": "S. Paul Michael",
   "sourceUrl": "https://poly.pizza/m/8McuTnDFC-Z",
   "scale": [
-   0.134226,
-   0.111739,
-   0.149731
+   0.161071,
+   0.134087,
+   0.179677
   ],
   "rotation": [
    0,
@@ -2554,19 +2627,19 @@
   "origin": "center",
   "offset": [
    -0.0001,
-   0.0341,
-   0.0288
+   0.0409,
+   0.0346
   ],
   "size": [
-   0.2,
-   0.3,
-   0.07
+   0.24,
+   0.36,
+   0.084
   ],
   "material": "toon",
   "collider": [
-   0.2,
-   0.3,
-   0.07
+   0.24,
+   0.36,
+   0.084
   ]
  },
  "cucumber": {
@@ -2577,9 +2650,9 @@
   "author": "Quaternius",
   "sourceUrl": "https://poly.pizza/m/nyGEAKs590",
   "scale": [
-   0.121647,
-   0.121647,
-   0.121647
+   0.182471,
+   0.182471,
+   0.182471
   ],
   "rotation": [
    0,
@@ -2588,20 +2661,20 @@
   ],
   "origin": "center",
   "offset": [
-   0.0004,
-   0.0011,
-   0.0004
+   0.0005,
+   0.0016,
+   0.0006
   ],
   "size": [
-   0.0391,
-   0.0394,
-   0.2
+   0.0586,
+   0.0592,
+   0.3
   ],
   "material": "toon",
   "collider": [
-   0.05,
-   0.05,
-   0.2
+   0.058,
+   0.058,
+   0.3
   ]
  },
  "frame": {
@@ -2612,9 +2685,9 @@
   "author": "Kay Lousberg (KayKit)",
   "sourceUrl": "https://github.com/KayKit-Game-Assets/KayKit-Furniture-Bits-1.0",
   "scale": [
-   0.420345,
-   0.420345,
-   0.420345
+   0.504415,
+   0.504415,
+   0.504415
   ],
   "rotation": [
    0,
@@ -2624,19 +2697,19 @@
   "origin": "center",
   "offset": [
    0,
-   -0.1296,
-   0.0078
+   -0.1555,
+   0.0093
   ],
   "size": [
-   0.2102,
-   0.26,
-   0.1595
+   0.2522,
+   0.312,
+   0.1914
   ],
   "material": "toon",
   "collider": [
-   0.2,
-   0.26,
-   0.03
+   0.24,
+   0.312,
+   0.192
   ]
  },
  "glass": {
@@ -2647,9 +2720,9 @@
   "author": "Isa Lousberg (Tiny Treats)",
   "sourceUrl": "https://tinytreats.itch.io/pleasant-picnic",
   "scale": [
-   0.288889,
-   0.288889,
-   0.288889
+   0.391111,
+   0.391111,
+   0.391111
   ],
   "rotation": [
    0,
@@ -2659,19 +2732,19 @@
   "origin": "center",
   "offset": [
    0,
-   -0.065,
+   -0.088,
    0
   ],
   "size": [
-   0.1156,
-   0.13,
-   0.1156
+   0.1564,
+   0.176,
+   0.1564
   ],
   "material": "toon",
   "collider": [
-   0.07,
-   0.13,
-   0.07
+   0.148,
+   0.176,
+   0.148
   ]
  },
  "lamp": {
@@ -2682,9 +2755,9 @@
   "author": "CreativeTrio",
   "sourceUrl": "https://poly.pizza/m/1nKtMmYxLT",
   "scale": [
-   1.23104,
-   1.23104,
-   1.23104
+   1.41569,
+   1.41569,
+   1.41569
   ],
   "rotation": [
    0,
@@ -2694,19 +2767,19 @@
   "origin": "center",
   "offset": [
    0,
-   -0.2,
+   -0.23,
    0
   ],
   "size": [
-   0.1932,
-   0.4,
-   0.1932
+   0.2222,
+   0.46,
+   0.2222
   ],
   "material": "toon",
   "collider": [
-   0.16,
-   0.4,
-   0.16
+   0.22,
+   0.46,
+   0.22
   ]
  },
  "mug": {
@@ -2717,9 +2790,9 @@
   "author": "Isa Lousberg (Tiny Treats)",
   "sourceUrl": "https://github.com/TinyTreats-Game-Assets/Tiny-Treats-Charming-Kitchen-1.0",
   "scale": [
-   0.285714,
-   0.285714,
-   0.285714
+   0.411429,
+   0.411429,
+   0.411429
   ],
   "rotation": [
    0,
@@ -2728,20 +2801,20 @@
   ],
   "origin": "center",
   "offset": [
-   -0.0199,
-   -0.05,
+   -0.0287,
+   -0.072,
    0
   ],
   "size": [
-   0.1463,
-   0.1,
-   0.1071
+   0.2106,
+   0.144,
+   0.1543
   ],
   "material": "toon",
   "collider": [
-   0.09,
-   0.1,
-   0.09
+   0.152,
+   0.144,
+   0.152
   ]
  },
  "package": {
@@ -2787,9 +2860,9 @@
   "author": "Quaternius",
   "sourceUrl": "https://poly.pizza/m/k2kgBepoMU",
   "scale": [
-   0.165115,
-   0.165115,
-   0.165115
+   0.215751,
+   0.215751,
+   0.215751
   ],
   "rotation": [
    -90,
@@ -2798,20 +2871,20 @@
   ],
   "origin": "center",
   "offset": [
-   -0.0005,
-   -0.0002,
+   -0.0006,
+   -0.0003,
    -0.0001
   ],
   "size": [
-   0.07,
-   0.01,
-   0.15
+   0.0915,
+   0.0131,
+   0.196
   ],
   "material": "toon",
   "collider": [
-   0.07,
-   0.01,
-   0.15
+   0.092,
+   0.013,
+   0.196
   ]
  },
  "pillow": {
@@ -2857,9 +2930,9 @@
   "author": "Isa Lousberg (Tiny Treats)",
   "sourceUrl": "https://tinytreats.itch.io/house-plants",
   "scale": [
-   0.177812,
-   0.177812,
-   0.177812
+   0.248937,
+   0.248937,
+   0.248937
   ],
   "rotation": [
    0,
@@ -2868,20 +2941,20 @@
   ],
   "origin": "center",
   "offset": [
-   0.0202,
-   -0.0512,
-   -0.0168
+   0.0283,
+   -0.0717,
+   -0.0236
   ],
   "size": [
-   0.1282,
-   0.18,
-   0.1215
+   0.1795,
+   0.252,
+   0.1701
   ],
   "material": "toon",
   "collider": [
-   0.14,
-   0.18,
-   0.14
+   0.196,
+   0.252,
+   0.196
   ]
  },
  "plate": {
@@ -2892,9 +2965,9 @@
   "author": "Isa Lousberg (Tiny Treats)",
   "sourceUrl": "https://github.com/TinyTreats-Game-Assets/Tiny-Treats-Charming-Kitchen-1.0",
   "scale": [
-   0.293333,
-   0.293333,
-   0.293333
+   0.365333,
+   0.365333,
+   0.365333
   ],
   "rotation": [
    0,
@@ -2904,19 +2977,19 @@
   "origin": "center",
   "offset": [
    0,
-   -0.0147,
+   -0.0183,
    0
   ],
   "size": [
-   0.22,
-   0.0293,
-   0.22
+   0.274,
+   0.0365,
+   0.274
   ],
   "material": "toon",
   "collider": [
-   0.22,
-   0.024,
-   0.22
+   0.274,
+   0.036,
+   0.274
   ]
  },
  "remote": {
@@ -2927,9 +3000,9 @@
   "author": "S. Paul Michael",
   "sourceUrl": "https://poly.pizza/m/11SpVcTGeWH",
   "scale": [
-   0.0191388,
-   0.0191388,
-   0.0191388
+   0.0277512,
+   0.0277512,
+   0.0277512
   ],
   "rotation": [
    -90,
@@ -2938,20 +3011,20 @@
   ],
   "origin": "center",
   "offset": [
-   -0.0019,
-   0.0088,
-   -0.0219
+   -0.0027,
+   0.0128,
+   -0.0317
   ],
   "size": [
-   0.0651,
-   0.0199,
-   0.16
+   0.0944,
+   0.0289,
+   0.232
   ],
   "material": "toon",
   "collider": [
-   0.05,
-   0.02,
-   0.16
+   0.094,
+   0.029,
+   0.232
   ]
  },
  "salmon": {
@@ -2997,9 +3070,9 @@
   "author": "jeremy",
   "sourceUrl": "https://poly.pizza/m/cs7k_ENAZjQ",
   "scale": [
-   0.0267974,
-   0.0267974,
-   0.0267974
+   0.0348367,
+   0.0348367,
+   0.0348367
   ],
   "rotation": [
    0,
@@ -3009,19 +3082,19 @@
   "origin": "center",
   "offset": [
    0,
-   -0.064,
-   -0.0018
+   -0.0832,
+   -0.0024
   ],
   "size": [
-   0.0934,
-   0.1274,
-   0.26
+   0.1214,
+   0.1657,
+   0.338
   ],
   "material": "toon",
   "collider": [
-   0.1,
-   0.1,
-   0.26
+   0.12,
+   0.165,
+   0.338
   ]
  },
  "sock": {
@@ -3032,9 +3105,9 @@
   "author": "MiniPoly",
   "sourceUrl": "https://poly.pizza/m/hcfzStK2HR",
   "scale": [
-   0.0986625,
-   0.0986625,
-   0.0986625
+   0.143061,
+   0.143061,
+   0.143061
   ],
   "rotation": [
    -90,
@@ -3043,20 +3116,20 @@
   ],
   "origin": "center",
   "offset": [
-   0.0196,
-   0.0001,
-   0.0314
+   0.0284,
+   0.0002,
+   0.0455
   ],
   "size": [
-   0.1264,
-   0.0707,
-   0.2
+   0.1833,
+   0.1025,
+   0.29
   ],
   "material": "toon",
   "collider": [
-   0.08,
-   0.02,
-   0.2
+   0.183,
+   0.103,
+   0.29
   ]
  },
  "sprayBottle": {
@@ -3098,9 +3171,9 @@
   "author": "sirkitree",
   "sourceUrl": "https://poly.pizza/m/49PYgABKfFo",
   "scale": [
-   0.169001,
-   0.169001,
-   0.169001
+   0.270401,
+   0.270401,
+   0.270401
   ],
   "rotation": [
    0,
@@ -3109,20 +3182,20 @@
   ],
   "origin": "center",
   "offset": [
-   -0.0103,
-   0.0038,
-   0.0187
+   -0.0164,
+   0.0061,
+   0.0299
   ],
   "size": [
-   0.0574,
-   0.0335,
-   0.1
+   0.0919,
+   0.0536,
+   0.16
   ],
   "material": "toon",
   "collider": [
-   0.06,
-   0.04,
-   0.1
+   0.092,
+   0.054,
+   0.16
   ]
  },
  "tpRoll": {
@@ -3133,9 +3206,9 @@
   "author": "Poly by Google",
   "sourceUrl": "https://poly.pizza/m/b-iE6Ii4GZk",
   "scale": [
-   0.111517,
-   0.111517,
-   0.111517
+   0.151663,
+   0.151663,
+   0.151663
   ],
   "rotation": [
    0,
@@ -3146,18 +3219,18 @@
   "offset": [
    0,
    0,
-   -0.0132
+   -0.018
   ],
   "size": [
-   0.1085,
-   0.1,
-   0.1349
+   0.1476,
+   0.136,
+   0.1835
   ],
   "material": "toon",
   "collider": [
-   0.11,
-   0.1,
-   0.11
+   0.148,
+   0.136,
+   0.148
   ]
  },
  "treatBag": {
@@ -3199,9 +3272,9 @@
   "author": "Casey Tumbers",
   "sourceUrl": "https://poly.pizza/m/6Xu7mttjodo",
   "scale": [
-   0.398077,
-   0.398077,
-   0.398077
+   0.517501,
+   0.517501,
+   0.517501
   ],
   "rotation": [
    0,
@@ -3211,19 +3284,19 @@
   "origin": "center",
   "offset": [
    0.0002,
-   0.0029,
-   -0.0028
+   0.0038,
+   -0.0036
   ],
   "size": [
-   0.1109,
-   0.2,
-   0.18
+   0.1441,
+   0.26,
+   0.2341
   ],
   "material": "toon",
   "collider": [
-   0.1,
-   0.2,
-   0.1
+   0.18,
+   0.26,
+   0.18
   ]
  },
  "vase": {
@@ -3234,9 +3307,9 @@
   "author": "Poly by Google",
   "sourceUrl": "https://poly.pizza/m/20LOTk3BnjO",
   "scale": [
-   0.00375253,
-   0.00375253,
-   0.00375253
+   0.00420283,
+   0.00420283,
+   0.00420283
   ],
   "rotation": [
    0,
@@ -3246,19 +3319,19 @@
   "origin": "center",
   "offset": [
    0,
-   -0.15,
+   -0.168,
    0
   ],
   "size": [
-   0.1705,
-   0.3,
-   0.1705
+   0.1909,
+   0.336,
+   0.1909
   ],
   "material": "toon",
   "collider": [
-   0.14,
-   0.3,
-   0.14
+   0.192,
+   0.336,
+   0.192
   ]
  },
  "wineBottle": {
@@ -3269,9 +3342,9 @@
   "author": "Isa Lousberg (Tiny Treats)",
   "sourceUrl": "https://tinytreats.itch.io/pleasant-picnic",
   "scale": [
-   0.315044,
-   0.315044,
-   0.315044
+   0.378052,
+   0.378052,
+   0.378052
   ],
   "rotation": [
    0,
@@ -3281,19 +3354,19 @@
   "origin": "center",
   "offset": [
    0,
-   -0.15,
+   -0.18,
    0
   ],
   "size": [
-   0.1229,
-   0.3,
-   0.1229
+   0.1474,
+   0.36,
+   0.1474
   ],
   "material": "toon",
   "collider": [
-   0.08,
-   0.3,
-   0.08
+   0.144,
+   0.36,
+   0.144
   ]
  },
  "yarn": {
@@ -3304,9 +3377,9 @@
   "author": "sirkitree",
   "sourceUrl": "https://poly.pizza/m/0kSphuYy8Or",
   "scale": [
-   0.208623,
-   0.208623,
-   0.208623
+   0.312934,
+   0.312934,
+   0.312934
   ],
   "rotation": [
    0,
@@ -3315,20 +3388,20 @@
   ],
   "origin": "center",
   "offset": [
-   0.0156,
-   -0.0291,
-   0.0213
+   0.0234,
+   -0.0436,
+   0.032
   ],
   "size": [
-   0.1183,
-   0.12,
-   0.1206
+   0.1775,
+   0.18,
+   0.1809
   ],
   "material": "toon",
   "collider": [
-   0.12,
-   0.12,
-   0.12
+   0.18,
+   0.18,
+   0.18
   ]
  }
 }

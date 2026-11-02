@@ -15,6 +15,7 @@ License: https://creativecommons.org/licenses/by/3.0/
 | `aquarium` | Fish Tank | Chris Ross | https://poly.pizza/m/2Rb9zxgkDEM |
 | `coatRack` | Hat Rack | Don Carson | https://poly.pizza/m/6QuAe-X7WG1 |
 | `shoeRack` | Little Bookcase | Don Carson | https://poly.pizza/m/74tXfxoDB9b |
+| `catBed` | Cat Bed | J-Toastie | https://poly.pizza/m/CYEBbzLl8J |
 | `laptop` | Laptop | J-Toastie | https://poly.pizza/m/UGOWjMUC5U |
 | `sprayBottle` | Spray Bottle | J-Toastie | https://poly.pizza/m/uQ6VGKpkWm |
 | `sock` | Socks | MiniPoly | https://poly.pizza/m/hcfzStK2HR |
@@ -71,7 +72,7 @@ License: https://creativecommons.org/publicdomain/zero/1.0/
 | `glass` | wine_glass | Isa Lousberg (Tiny Treats) | https://tinytreats.itch.io/pleasant-picnic |
 | `kettle` | kettle | Isa Lousberg (Tiny Treats) | https://github.com/TinyTreats-Game-Assets/Tiny-Treats-Charming-Kitchen-1.0 |
 | `kitchenSink` | countertop_sink | Isa Lousberg (Tiny Treats) | https://github.com/TinyTreats-Game-Assets/Tiny-Treats-Charming-Kitchen-1.0 |
-| `laundryBasket` | picnic_basket_round | Isa Lousberg (Tiny Treats) | https://tinytreats.itch.io/pleasant-picnic |
+| `laundryBasket` | basket_B | Isa Lousberg (Tiny Treats) | https://tinytreats.itch.io/bakery-interior |
 | `mirror` | mirror | Isa Lousberg (Tiny Treats) | https://github.com/TinyTreats-Game-Assets/Tiny-Treats-Bubbly-Bathroom-1.0 |
 | `mug` | mug_red | Isa Lousberg (Tiny Treats) | https://github.com/TinyTreats-Game-Assets/Tiny-Treats-Charming-Kitchen-1.0 |
 | `package` | package | Isa Lousberg (Tiny Treats) | https://github.com/TinyTreats-Game-Assets/Tiny-Treats-Homely-House-1.0 |
@@ -87,7 +88,6 @@ License: https://creativecommons.org/publicdomain/zero/1.0/
 | `wallCabinet` | wall_cabinet_straight | Isa Lousberg (Tiny Treats) | https://github.com/TinyTreats-Game-Assets/Tiny-Treats-Charming-Kitchen-1.0 |
 | `wineBottle` | wine_bottle | Isa Lousberg (Tiny Treats) | https://tinytreats.itch.io/pleasant-picnic |
 | `armchair` | armchair_pillows | Kay Lousberg (KayKit) | https://github.com/KayKit-Game-Assets/KayKit-Furniture-Bits-1.0 |
-| `bed` | bed_double_A | Kay Lousberg (KayKit) | https://github.com/KayKit-Game-Assets/KayKit-Furniture-Bits-1.0 |
 | `book` | book_single | Kay Lousberg (KayKit) | https://github.com/KayKit-Game-Assets/KayKit-Furniture-Bits-1.0 |
 | `chair` | chair_A_wood | Kay Lousberg (KayKit) | https://github.com/KayKit-Game-Assets/KayKit-Furniture-Bits-1.0 |
 | `coffeeTable` | table_low | Kay Lousberg (KayKit) | https://github.com/KayKit-Game-Assets/KayKit-Furniture-Bits-1.0 |
@@ -99,6 +99,7 @@ License: https://creativecommons.org/publicdomain/zero/1.0/
 | `pillow` | pillow_A | Kay Lousberg (KayKit) | https://github.com/KayKit-Game-Assets/KayKit-Furniture-Bits-1.0 |
 | `rug` | rug_rectangle_stripes_A | Kay Lousberg (KayKit) | https://github.com/KayKit-Game-Assets/KayKit-Furniture-Bits-1.0 |
 | `rugRound` | rug_oval_A | Kay Lousberg (KayKit) | https://github.com/KayKit-Game-Assets/KayKit-Furniture-Bits-1.0 |
+| `rugOffice` | rug_rectangle_stripes_B | Kay Lousberg (KayKit) | https://github.com/KayKit-Game-Assets/KayKit-Furniture-Bits-1.0 |
 | `shelf` | shelf_A_big | Kay Lousberg (KayKit) | https://github.com/KayKit-Game-Assets/KayKit-Furniture-Bits-1.0 |
 | `sideTable` | table_small | Kay Lousberg (KayKit) | https://github.com/KayKit-Game-Assets/KayKit-Furniture-Bits-1.0 |
 | `sitter` | KayKit Adventurers: Rogue | Kay Lousberg (KayKit) | https://github.com/KayKit-Game-Assets/KayKit-Character-Pack-Adventures-1.0 |
@@ -116,6 +117,7 @@ License: https://creativecommons.org/publicdomain/zero/1.0/
 | `shards` | plate-broken | Kenney | https://kenney.nl/assets/food-kit |
 | `wardrobe` | bookcaseClosedDoors | Kenney | https://kenney.nl/assets/furniture-kit |
 | `litterBox` | Container Bag Open | MilkAndBanana | https://poly.pizza/m/WytMSfw8xI |
+| `bed` | Bed_King (frame legs raised in code) | Quaternius | https://quaternius.com/packs/ultimatehomeinterior.html |
 | `cucumber` | Cucumber | Quaternius | https://poly.pizza/m/nyGEAKs590 |
 | `curtains` | Curtains_Double | Quaternius | https://quaternius.com/packs/ultimatehomeinterior.html |
 | `fish` | Fish | Quaternius | https://poly.pizza/m/XWl86YFtpF |

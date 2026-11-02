@@ -9,7 +9,7 @@ import type { C2H, H2C } from '../net/protocol';
 import { PROTOCOL_VERSION } from '../net/protocol';
 import type { HostLink, PeerHost } from '../net/transport';
 import { Sim } from './sim';
-import { randomLook } from '../core/profile';
+import { localUi, randomLook } from '../core/profile';
 import { BOT_NAMES } from './bots/names';
 
 const MAX_CATS = 4;
@@ -143,6 +143,8 @@ export class HostSession {
   /** builds the roster (+ bots) and starts the round */
   start(seed = Math.floor(Math.random() * 1e9)) {
     const players: PlayerInfo[] = this.lobby.players.map((p) => ({ ...p }));
+    // never typed a name: the profile default "Cat" reads wrong over the sitter's head
+    for (const p of players) if (p.role === 'sitter' && (!p.name.trim() || p.name === 'Cat')) p.name = 'Sam';
     const online = !!this.peer;
     if (!players.some((p) => p.role === 'sitter')) {
       players.push({ id: 'bot-sitter', name: 'Sam', role: 'sitter', look: randomLook('Sam'), bot: true, connected: true });
@@ -188,6 +190,7 @@ export class HostSession {
     }
     const sim = this.sim;
     if (!sim) return;
+    if (localUi.paused && !this.peer && !BALANCE) return; // solo: the pause card really pauses
     // ?timeScale=N: N sim steps per host step (all-bot balance runs)
     this.scaleAcc += TIME_SCALE;
     for (; this.scaleAcc >= 1; this.scaleAcc--) sim.step(dt);

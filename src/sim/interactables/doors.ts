@@ -81,6 +81,17 @@ for (const id of IDS) {
         // cats hang on the handle until it gives
         role: 'cat', mode: 'hold', time: CFG.door.catOpen, anim: 'hangDoor', label: 'Hang on the handle',
         check: (ctx, s, ch) => (!def(ctx, id) || ctx.doorOpen(id) ? false : ch.item ? 'Mouth full' : true),
+        // hang from the handle on our own side of the panel, facing it (the pose puts the paws on the handle at 0.35 m)
+        onStart(ctx, s, ch) {
+          const d = def(ctx, id);
+          if (!d) return;
+          const c = doorBox(d).center, ux = c[0] - d.hinge[0], uz = c[2] - d.hinge[2], ul = Math.hypot(ux, uz) || 1;
+          const sd = side(d, ch.p) || 1, nx = Math.sin(d.closedYaw) * sd, nz = Math.cos(d.closedYaw) * sd;
+          const along = d.width - 0.15;
+          const yaw = Math.atan2(-nx, -nz);
+          ctx.teleport(ch, [d.hinge[0] + (ux / ul) * along + nx * 0.35, ch.p[1], d.hinge[2] + (uz / ul) * along + nz * 0.35], yaw);
+          if (ch.work) ch.work.yaw = yaw;
+        },
         onComplete(ctx) { ctx.setDoor(id, true); },
       },
     ],

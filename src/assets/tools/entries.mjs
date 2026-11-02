@@ -68,6 +68,7 @@ export const ENTRIES = [
   { key: 'shelf', cat: 'furniture', src: KFB + 'shelf_A_big.gltf', name: 'shelf_A_big', ...kfb, scale: 0.6 },
   { key: 'rug', cat: 'furniture', src: KFB + 'rug_rectangle_stripes_A.gltf', name: 'rug_rectangle_stripes_A', ...kfb, fit: { x: 2.6, z: 1.8, y: 0.03 }, nonUniform: true },
   { key: 'rugRound', cat: 'furniture', src: KFB + 'rug_oval_A.gltf', name: 'rug_oval_A', ...kfb, fit: { x: 2.0, z: 1.4, y: 0.03 }, nonUniform: true },
+  { key: 'rugOffice', cat: 'furniture', src: KFB + 'rug_rectangle_stripes_B.gltf', name: 'rug_rectangle_stripes_B', ...kfb, fit: { x: 2.2, z: 1.5, y: 0.03 }, nonUniform: true },
   { key: 'plant', cat: 'furniture', src: TTP + 'monstera_plant_large_potted.gltf', name: 'monstera_plant_large_potted', ...ttp, fit: { y: 1.3 } },
   { key: 'plantTall', cat: 'furniture', src: TTP + 'yucca_plant_large_potted.gltf', name: 'yucca_plant_large_potted', ...ttp, fit: { y: 1.5 } },
   { key: 'plantSmall', cat: 'furniture', src: TTP + 'sansevieria_plant_medium_potted.gltf', name: 'sansevieria_plant_medium_potted', ...ttp, fit: { y: 0.6 } },
@@ -93,7 +94,10 @@ export const ENTRIES = [
   { key: 'carrier', cat: 'furniture', src: TTPP + 'picnic_basket_square.gltf', name: 'picnic_basket_square', ...ttpp, fit: { x: 0.62, y: 0.38, z: 0.46 }, nonUniform: true,
     nodes: { lidLeft: 'picnic_basket_lid_left', lidRight: 'picnic_basket_lid_right', handleLeft: 'picnic_basket_handle_left', handleRight: 'picnic_basket_handle_right' },
     notes: 'No free pet carrier exists; a lidded wicker basket (classic cat basket) stands in. Flip the two lid nodes for carrier.closed, wobble the root while a caged cat mashes.' },
-  { key: 'laundryBasket', cat: 'furniture', src: TTPP + 'picnic_basket_round.gltf', name: 'picnic_basket_round', ...ttpp, fit: { y: 0.45 }, notes: 'Wicker basket used as the laundry basket (laundry spot).' },
+  { key: 'laundryBasket', cat: 'furniture', src: A + 'props/tinytreats-bakery-interior/Assets/gltf/basket_B.gltf', name: 'basket_B', lic: CC0, author: 'Isa Lousberg (Tiny Treats)', url: 'https://tinytreats.itch.io/bakery-interior', fit: { x: 0.6 },
+    notes: 'Open wicker tub with handle holes: the laundry basket, a `towels` stack sits in it (laundry spot).' },
+  { key: 'catBed', cat: 'furniture', src: FPP + 'catbed_jtoastie.glb', name: 'Cat Bed', ...pp('CYEBbzLl8J', 'J-Toastie', BY), fit: { x: 0.62 }, tint: { WhiteMaterial: '#d9a093', OtherMat: '#f3e3cf' },
+    notes: 'Decor: the expensive cat bed nobody sleeps in (no nav surface on purpose).' },
   { key: 'foodBowl', cat: 'furniture', src: FPP + 'petbowl_full_google.glb', name: 'Dog bowl (full)', ...pp('eA4LSFu4lj1', 'Poly by Google', BY), fit: { x: 0.2 }, simplify: 0.25 },
   { key: 'foodBowlEmpty', cat: 'furniture', src: FPP + 'petbowl_empty_google.glb', name: 'Dog bowl (empty)', ...pp('cMk8S7aDHny', 'Poly by Google', BY), fit: { x: 0.2 } },
 
@@ -108,7 +112,10 @@ export const ENTRIES = [
   { key: 'bathMat', cat: 'furniture', src: TTB + 'mat.gltf', name: 'mat', ...ttb, fit: { x: 0.9 } },
 
   // ------------------------------------------------------------ bedroom
-  { key: 'bed', cat: 'furniture', src: KFB + 'bed_double_A.gltf', name: 'bed_double_A', ...kfb, fit: { z: 2.1 } },
+  // metal frame: level.ts raises the thin legs (a high-rise frame) so a cat fits under it while it still reads as a bed
+  { key: 'bed', cat: 'furniture', src: QUA + 'Bed_King.glb', name: 'Bed_King', ...qua, fit: { z: 2.1 },
+    tint: { DarkRed: '#5d84ab', Red: '#7ea6ca', White: '#f6efe4', Grey: '#e7b45c', Wood: '#4b3b33' },
+    notes: 'Raised in level.ts: only the Wood frame below 0.22 m stretches, the bedding moves up rigidly.' },
   { key: 'nightstand', cat: 'furniture', src: KFB + 'cabinet_small.gltf', name: 'cabinet_small', ...kfb, fit: { y: 0.55 } },
   { key: 'wardrobe', cat: 'furniture', src: KFK + 'bookcaseClosedDoors.glb', name: 'bookcaseClosedDoors', ...kfk, fit: { y: 1.95 }, tint: { wood: '#c98a58', metal: '#e0c27a' } },
 
@@ -129,16 +136,16 @@ export const ENTRIES = [
   { key: 'fence', cat: 'decor', src: TTH + 'fence_straight_long.gltf', name: 'fence_straight_long', ...tth, fit: { y: 0.95 } },
   { key: 'doormat', cat: 'furniture', src: TTH + 'doormat.gltf', name: 'doormat', ...tth, fit: { x: 0.9 } },
 
-  // ------------------------------------------------------------ decor (static dressing)
-  { key: 'boots', cat: 'decor', src: TTH + 'boots.gltf', name: 'boots', ...tth, fit: { y: 0.24 } },
+  // ------------------------------------------------------------ decor (static dressing; small things ~1.25x real, like the props)
+  { key: 'boots', cat: 'decor', src: TTH + 'boots.gltf', name: 'boots', ...tth, fit: { y: 0.3 } },
   { key: 'packageOpen', cat: 'decor', src: PPP + 'empty-box_pZBpmjtvw8.glb', name: 'Empty Box', ...pp('pZBpmjtvw8', 'CreativeTrio', CC0), fit: { x: 0.5 } },
   { key: 'towels', cat: 'decor', src: TTB + 'towel_stacked.gltf', name: 'towel_stacked', ...ttb, fit: { x: 0.35 } },
-  { key: 'ducky', cat: 'decor', src: A + 'props/tinytreats-bubbly-bathroom/Assets/gltf/ducky.gltf', name: 'ducky', ...ttb, fit: { y: 0.1 } },
-  { key: 'toaster', cat: 'decor', src: TTK + 'toaster.gltf', name: 'toaster', ...ttk, fit: { x: 0.26 } },
-  { key: 'kettle', cat: 'decor', src: TTK + 'kettle.gltf', name: 'kettle', ...ttk, fit: { y: 0.22 } },
-  { key: 'bread', cat: 'decor', src: TTBG + 'bread.gltf', name: 'bread', ...ttbg, fit: { z: 0.28 } },
-  { key: 'fruitBowl', cat: 'decor', src: TTPP + 'grapes_bowl.gltf', name: 'grapes_bowl', ...ttpp, fit: { x: 0.22 } },
-  { key: 'alarmClock', cat: 'decor', src: PPP + 'alarm-clock_y5f363OS9C.glb', name: 'Alarm Clock', ...pp('y5f363OS9C', 'CreativeTrio', CC0), fit: { y: 0.13 } },
+  { key: 'ducky', cat: 'decor', src: A + 'props/tinytreats-bubbly-bathroom/Assets/gltf/ducky.gltf', name: 'ducky', ...ttb, fit: { y: 0.13 } },
+  { key: 'toaster', cat: 'decor', src: TTK + 'toaster.gltf', name: 'toaster', ...ttk, fit: { x: 0.32 } },
+  { key: 'kettle', cat: 'decor', src: TTK + 'kettle.gltf', name: 'kettle', ...ttk, fit: { y: 0.28 } },
+  { key: 'bread', cat: 'decor', src: TTBG + 'bread.gltf', name: 'bread', ...ttbg, fit: { z: 0.34 } },
+  { key: 'fruitBowl', cat: 'decor', src: TTPP + 'grapes_bowl.gltf', name: 'grapes_bowl', ...ttpp, fit: { x: 0.28 } },
+  { key: 'alarmClock', cat: 'decor', src: PPP + 'alarm-clock_y5f363OS9C.glb', name: 'Alarm Clock', ...pp('y5f363OS9C', 'CreativeTrio', CC0), fit: { y: 0.17 } },
   { key: 'groceryBag', cat: 'decor', src: KFD + 'bag.glb', name: 'bag', ...kfd, fit: { y: 0.36 }, notes: 'End show: owner B carries it in the hold anchor, the baguette sticks out of the top.' },
   { key: 'baguette', cat: 'decor', src: KFD + 'loaf-baguette.glb', name: 'loaf-baguette', ...kfd, rot: [0, 90, 0], fit: { z: 0.55 }, notes: 'Long axis = Z. Sticks out of groceryBag tilted ~20 degrees.' },
   { key: 'fishBones', cat: 'decor', src: KFD + 'fish-bones.glb', name: 'fish-bones', ...kfd, fit: { z: 0.3 } },
@@ -148,7 +155,7 @@ export const ENTRIES = [
   { key: 'glass', cat: 'props', prop: 'glass', src: TTPP + 'wine_glass.gltf', name: 'wine_glass', ...ttpp },
   { key: 'plate', cat: 'props', prop: 'plate', match: 'x', src: A + 'props/tinytreats-charming-kitchen/Assets/gltf/plate.gltf', name: 'plate', ...ttk },
   { key: 'vase', cat: 'props', prop: 'vase', src: PPP + 'vase_20LOTk3BnjO.glb', name: 'Vase', ...pp('20LOTk3BnjO', 'Poly by Google', BY) },
-  { key: 'book', cat: 'props', prop: 'book', rot: [0, 90, 0], fit: { x: 0.15, y: 0.2, z: 0.05 }, nonUniform: true, src: A + 'props/kaykit-furniture-bits/gltf/book_single.gltf', name: 'book_single', ...kfb },
+  { key: 'book', cat: 'props', prop: 'book', rot: [0, 90, 0], match: 'all', src: A + 'props/kaykit-furniture-bits/gltf/book_single.gltf', name: 'book_single', ...kfb },
   { key: 'remote', cat: 'props', prop: 'remote', match: 'z', rot: [-90, 0, 0], src: PPP + 'timehotel-remote_11SpVcTGeWH.glb', name: 'TIME HOTEL 2.22', ...pp('11SpVcTGeWH', 'S. Paul Michael', BY) },
   { key: 'plantPot', cat: 'props', prop: 'plantPot', src: TTP + 'pothos_plant_small_potted.gltf', name: 'pothos_plant_small_potted', ...ttp },
   { key: 'frame', cat: 'props', prop: 'frame', src: A + 'props/kaykit-furniture-bits/gltf/pictureframe_standing_A.gltf', name: 'pictureframe_standing_A', ...kfb },

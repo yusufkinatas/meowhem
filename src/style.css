@@ -88,6 +88,10 @@ input[type='checkbox'] { width: 22px; height: 22px; accent-color: var(--terra); 
 .controls-hint { margin-top: 16px; padding-top: 12px; border-top: 3px dashed var(--line); color: var(--ink-soft); font-size: 13px; font-weight: 700; display: flex; flex-direction: column; gap: 6px; align-items: center; }
 .controls-hint > div { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 4px 6px; }
 .controls-hint kbd.cap { height: 21px; min-width: 22px; font-size: 11px; border-bottom-width: 3px; }
+.settings { display: flex; flex-wrap: wrap; gap: 6px 18px; justify-content: center; margin-top: 4px; }
+.settings label { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 800; color: var(--ink-soft); margin: 0; flex-direction: row; }
+.settings input[type=range] { width: 120px; accent-color: var(--terra); }
+.lockhint .settings { margin: 10px 0 14px; }
 .controls-hint .who { font-family: var(--head); font-weight: 800; color: var(--ink); margin-right: 4px; font-size: 14px; }
 .card.title { width: min(1080px, 100%); padding: 22px 28px 18px; }
 .title-head { text-align: center; }
@@ -255,6 +259,13 @@ input[type='checkbox'] { width: 22px; height: 22px; accent-color: var(--terra); 
 .board small, .end-players small { color: var(--ink-soft); font-size: 11px; text-transform: uppercase; }
 .lockhint { position: absolute; inset: 0; display: none; align-items: center; justify-content: center; background: rgba(58, 42, 34, 0.25); pointer-events: auto; }
 .lockhint.show { display: flex; }
+.lockhint .lh-soft { display: none; }
+.lockhint.soft { background: none; pointer-events: none; align-items: flex-end; padding-bottom: 196px; }
+.lockhint.soft .card { display: none; }
+.lockhint.soft .lh-soft {
+  display: block; padding: 8px 18px; border: 3px solid var(--ink); border-radius: 99px; background: var(--paper);
+  font-family: var(--head); font-weight: 800; font-size: 16px; color: var(--ink); box-shadow: 0 4px 0 rgba(58, 42, 34, 0.25);
+}
 .lockhint .card { width: auto; text-align: center; }
 .lh-title { font-family: var(--head); font-weight: 800; font-size: 34px; }
 .lh-sub { color: var(--ink-soft); font-weight: 700; margin-bottom: 14px; }

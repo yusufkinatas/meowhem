@@ -12,11 +12,12 @@ import { RAPIER, buildStaticWorld, groups, G, yawQuat, lineOfSight, rayDist, typ
 import { CharMotion, type MotionInput } from '../core/charMotion';
 import { add, clamp, dist, distXZ, facingDot, fwd, makeRng, r3, rv, yawTo } from '../core/math';
 import type {
-  Action, Alert, CharState, GameConfig, GameEvent, Mess, MoveMsg, Phase, PlayerInfo, PropSnap, Results, Snapshot, StatusKey, Stats,
+  Action, Alert, CharState, Difficulty, GameConfig, GameEvent, Mess, MoveMsg, Phase, PlayerInfo, PropSnap, Results, Snapshot, StatusKey, Stats,
 } from '../core/types';
 import type { Char, PropView, SimContext } from './interactables/types';
 import { Interactions } from './interact';
 import { buildResults, emptyStats, type Disaster } from './awards';
+import { TEAMMATE } from './bots/difficulty';
 import { createBotBrain, type BotBrain, type BotIntent, type BotWorldView, type BotOption } from './bots/types';
 
 // bot brains self-register (placeholder + whatever later agents add)
@@ -71,6 +72,8 @@ export interface SimProp extends PropView {
   touchT: number;
   seen: boolean;
   eyeMul: number;
+  /** clutter weight baked when it fell (scale row x the round's clutter ramp) */
+  cl: number;
   sent: number[] | null;
   pushBy: string | null;
   pushT: number;
@@ -131,6 +134,10 @@ export class Sim {
   /** cats in the round (bots included), fixed at round start */
   readonly n: number;
   readonly sc: ScaleRow;
+  /** round length vs the tuned 6:00 (1 there): mess weighs more in a 3:00 round, less in a 9:00 one */
+  readonly lenK: number;
+  /** bot difficulty per role: the menu setting is for the players' opponents, a player's bot teammates play TEAMMATE */
+  readonly diff: Record<Role, Difficulty>;
   phase: Phase = 'countdown';
   countdown: number = CFG.round.countdown;
   time = 0;
@@ -169,6 +176,11 @@ export class Sim {
     this.timeLeft = cfg.roundSeconds;
     this.n = Math.max(1, cfg.players.filter((p) => p.role === 'cat').length);
     this.sc = scaleFor(this.n);
+    const r = 360 / clamp(cfg.roundSeconds, 120, 900);
+    this.lenK = r ** (r > 1 ? CFG.roundLength.short : CFG.roundLength.long);
+    const humans = new Set(cfg.players.filter((p) => !p.bot).map((p) => p.role));
+    const mate = (r: Role) => humans.has(r) && !humans.has(r === 'cat' ? 'sitter' : 'cat');
+    this.diff = { cat: mate('cat') ? TEAMMATE : cfg.botDifficulty, sitter: mate('sitter') ? TEAMMATE : cfg.botDifficulty };
     this.sw = buildStaticWorld(level);
     this.world = this.sw.world;
     const boxes = (tag: string) => level.colliders.filter((b) => b.tag === tag).map((b) => ({ c: b.center, h: b.half, r: b.rotY ?? 0 }));
@@ -203,7 +215,7 @@ export class Sim {
     for (const ch of info.id) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
     const c: SimChar = {
       s, info, motion: new CharMotion(this.world, info.role, spawn, s.yaw),
-      brain: bot ? createBotBrain({ id: info.id, role: info.role, index, difficulty: this.cfg.botDifficulty, rng: makeRng(this.cfg.seed + index * 977) }) : null,
+      brain: bot ? createBotBrain({ id: info.id, role: info.role, index, difficulty: this.diff[info.role], rng: makeRng(this.cfg.seed + index * 977) }) : null,
       poopRate: 1 / (CFG.poop.fillMin + this.rng() * (CFG.poop.fillMax - CFG.poop.fillMin)),
       lastHiss: -99, cageCut: 0, cageTotal: 1, cagePos: null, cageMeows: 0, lastPos: [...spawn], pitch: 0.85 + (h % 100) / 250,
       intent: {}, jumpHeld: false,
@@ -225,7 +237,7 @@ export class Sim {
     }
     c.s.bot = true;
     c.info = { ...c.info, bot: true, connected: false };
-    c.brain = createBotBrain({ id, role: c.s.role, index: this.chars.indexOf(c), difficulty: this.cfg.botDifficulty, rng: makeRng(this.cfg.seed + 31) });
+    c.brain = createBotBrain({ id, role: c.s.role, index: this.chars.indexOf(c), difficulty: this.diff[c.s.role], rng: makeRng(this.cfg.seed + 31) });
     this.interactions.stop(c, false);
     this.setPush(c, false);
     this.toast(`${c.s.name} left. A bot took over.`, undefined, 'info');
@@ -515,7 +527,7 @@ export class Sim {
     const q = yawQuat(rotY);
     const pr: SimProp = {
       id, kind, def, body, p: [...home], q: [q.x, q.y, q.z, q.w], home, homeRot: rotY, lift, fallen: false,
-      special: !!def.special, restT: 0, prevVy: 0, touchBy: null, touchT: -99, seen: false, eyeMul: 1, sent: null,
+      special: !!def.special, restT: 0, prevVy: 0, touchBy: null, touchT: -99, seen: false, eyeMul: 1, cl: 1, sent: null,
       pushBy: null, pushT: -99, fightBy: null,
     };
     this.props.set(id, pr);
@@ -615,12 +627,19 @@ export class Sim {
     if (pr.pushBy && this.hostT - pr.pushT < CFG.push.knockWindow) this.stat(pr.pushBy, 'slowPushes', 1);
   }
 
+  /** M1 clutter weight for mess made right now: the scale row, ramped up over the round (early knocks are cheap) */
+  clutterNow() {
+    const R = CFG.clutterRamp, over = R.over * this.cfg.roundSeconds / 360;
+    return this.sc.clutter * this.lenK * clamp(R.from + ((1 - R.from) * this.time) / over, R.from, 1);
+  }
+
   private onFallen(pr: SimProp) {
     pr.fallen = true;
+    pr.cl = this.clutterNow();
     const who = this.culprit(pr);
     this.eyeCheck(pr, who);
     this.knocked(pr, who, false);
-    if (who) this.stat(who.s.id, 'messCaused', pr.def.fallenMess * pr.eyeMul * this.sc.clutter);
+    if (who) this.stat(who.s.id, 'messCaused', pr.def.fallenMess * pr.eyeMul * pr.cl);
     if (pr.def.fallenMess > 0) this.sound('thud', pr.p, { volume: 0.6 });
   }
 
@@ -666,7 +685,7 @@ export class Sim {
     const pos: Vec3 = [r3(p[0]), r3(this.surfaceY(p) + 0.005), r3(p[2])];
     const onRug = this.inBoxes(pos, this.rugs);
     // M1: every cleanable mess weight scales with the cat count
-    const w = MESS_WEIGHTS[kind] * (opts.mul ?? 1) * (kind === 'hairball' && onRug ? 2 : 1) * this.sc.clutter;
+    const w = MESS_WEIGHTS[kind] * (opts.mul ?? 1) * (kind === 'hairball' && onRug ? 2 : 1) * this.clutterNow();
     this.mess.set(id, { id, kind, p: pos, yaw: r3(opts.yaw ?? this.rng() * Math.PI * 2), scale: opts.scale ?? 1, onRug, w, by: opts.by });
     this.messVer++;
     if (opts.by) this.stat(opts.by, 'messCaused', w);
@@ -690,6 +709,7 @@ export class Sim {
   }
 
   addPermanent(points: number, label: string, by?: string, spot?: SpotId) {
+    points = Math.round(points * this.lenK * 2) / 2;
     this.permanent += points;
     this.popup(`${label}  +${points}%`, undefined, '#e05a47');
     // credit: `by`, else every cat that worked the running interactable, split evenly
@@ -710,7 +730,7 @@ export class Sim {
   private updateMeter() {
     let m = this.permanent;
     for (const x of this.mess.values()) m += x.w;
-    for (const p of this.props.values()) if (p.fallen) m += p.def.fallenMess * p.eyeMul * this.sc.clutter;
+    for (const p of this.props.values()) if (p.fallen) m += p.def.fallenMess * p.eyeMul * p.cl;
     for (const v of this.penalties.values()) m += v;
     this.meter = clamp(m, 0, 100);
     return m;
@@ -1389,7 +1409,7 @@ export class Sim {
       winner: this.winner ?? 'sitter', meter: this.meter, timeLeft: this.timeLeft, forfeit: this.forfeit, overtime: this.hadOvertime,
       players: this.chars.map((c) => ({ id: c.s.id, name: c.s.name, role: c.s.role, bot: c.s.bot, stats: this.stats[c.s.id] })),
       disasters: this.disasters, mess: this.messes(),
-      fallen: { count: fallen.length, points: fallen.reduce((a, p) => a + p.def.fallenMess * p.eyeMul * this.sc.clutter, 0) },
+      fallen: { count: fallen.length, points: fallen.reduce((a, p) => a + p.def.fallenMess * p.eyeMul * p.cl, 0) },
       penalties: [...this.penalties],
     });
     this.emit({ e: 'results', results: this.results });
@@ -1399,7 +1419,7 @@ export class Sim {
   balance() {
     const sum = (k: keyof Stats) => this.chars.reduce((a, c) => a + (this.stats[c.s.id]?.[k] ?? 0), 0);
     return {
-      n: this.n, difficulty: this.cfg.botDifficulty, winner: this.winner, endTime: Math.round(this.time), overtime: this.hadOvertime,
+      n: this.n, difficulty: this.cfg.botDifficulty, catBots: this.diff.cat, sitterBot: this.diff.sitter, winner: this.winner, endTime: Math.round(this.time), overtime: this.hadOvertime,
       meter: Math.round(this.meter), meterAt: this.meterAt,
       permanents: this.disasters.map((d) => `${d.key}@${Math.round(d.t)}`),
       grabs: sum('catsGrabbed'), jails: sum('catsJailed'), undos: sum('undos'), tosses: sum('tosses'), slips: sum('slips'),
@@ -1439,7 +1459,8 @@ export class Sim {
       options.push({
         key: k.key, label: k.label, ok: k.ok, at: k.anchor, range: k.range, spot: k.spot?.id ?? null,
         room: this.roomAt(k.anchor), interactable: k.def?.id ?? '', alert: !!k.use.alert,
-        progress: this.interactions.progress.get(k.pkey) ?? 0,
+        // an Undo reports the cat use's progress (what there is to undo), not its own hold
+        progress: k.key.startsWith('u:') ? this.interactions.useProgress(`i:${k.key.slice(2)}`) : this.interactions.progress.get(k.pkey) ?? 0,
       });
     }
     return {
@@ -1455,7 +1476,7 @@ export class Sim {
       time: this.time,
       timeLeft: this.timeLeft,
       meter: this.meter,
-      difficulty: this.cfg.botDifficulty,
+      difficulty: this.diff[c.s.role],
       doorOpen: (id) => this.doorOpen(id),
       roomAt: (p) => this.roomAt(p),
       sitterSees: (id) => { const x = this.byId.get(id); return !!x && this.sitterSees(x.s); },
@@ -1631,5 +1652,5 @@ function makeContext(sim: Sim): SimContext & { readonly n: number; readonly scal
     progress: (k) => sim.progress(k),
     setProgress: (k, v) => sim.setProgress(k, v),
   };
-  return Object.assign(ctx, { n: sim.n, scale: sim.sc, difficulty: sim.cfg.botDifficulty });
+  return Object.assign(ctx, { n: sim.n, scale: sim.sc, difficulty: sim.diff.cat }); // only bot cats read it (Cat TV)
 }

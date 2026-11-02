@@ -10,12 +10,13 @@ import type { CharState } from '../../core/types';
 import type { PropView } from '../interactables/types';
 import { registerBotBrain, type BotBrain, type BotBrainOpts, type BotIntent, type BotOption, type BotWorldView } from './types';
 import { BOT_DIFF, type BotDiff } from './difficulty';
-import { grabbableFrom, navNodes, reachFrom, reachPath, standNodes } from './nav';
+import { clearXZ, grabbableFrom, navNodes, reachFrom, reachPath, standNodes } from './nav';
 import { CFG, scaleFor } from '../../config';
 import { Walker } from './walker';
 
 type Pers = 'goblin' | 'gremlin' | 'opportunist' | 'sleepy';
-const PERS: Pers[] = ['goblin', 'gremlin', 'opportunist', 'sleepy'];
+/** handed out in this order among the bot cats, so a lone bot (or a player's single helper) is the disaster one */
+const PERS: Pers[] = ['goblin', 'opportunist', 'gremlin', 'sleepy'];
 const WEIGHT: Record<Pers, { disaster: number; knock: number; mischief: number; loaf: number; idle: number }> = {
   goblin: { disaster: 3, knock: 0.7, mischief: 0.5, loaf: 0.2, idle: 0.25 },
   gremlin: { disaster: 1.1, knock: 2.6, mischief: 1, loaf: 0.3, idle: 0.35 },
@@ -73,15 +74,37 @@ export function propEdge(level: LevelData, pr: PropView): { dist: number; out: V
     if (Math.abs(lx) > b.half[0] + 0.02 || Math.abs(lz) > b.half[2] + 0.02) continue;
     const edges: [number, number, number][] = [[b.half[0] - lx, 1, 0], [b.half[0] + lx, -1, 0], [b.half[2] - lz, 0, 1], [b.half[2] + lz, 0, -1]];
     edges.sort((a, c) => a[0] - c[0]);
-    const [d, ox, oz] = edges[0];
-    const out: Vec3 = [ox * Math.cos(r) + oz * Math.sin(r), 0, -ox * Math.sin(r) + oz * Math.cos(r)];
-    // stand 0.38 m inward of the prop, kept on the surface
-    const inset = (h: number, v: number) => (h < 0.16 ? 0 : clamp(v, -h + 0.13, h - 0.13));
-    const sx = inset(b.half[0], lx - ox * 0.38), sz = inset(b.half[2], lz - oz * 0.38);
-    const stand: Vec3 = [b.center[0] + sx * Math.cos(r) + sz * Math.sin(r), top, b.center[2] - sx * Math.sin(r) + sz * Math.cos(r)];
-    if (!best || d < best.dist) best = { dist: d, out, top, stand };
+    for (const [d, ox, oz] of edges) {
+      if (best && d >= best.dist) break;
+      const out: Vec3 = [ox * Math.cos(r) + oz * Math.sin(r), 0, -ox * Math.sin(r) + oz * Math.cos(r)];
+      // a wall, a taller cabinet or more counter right past this edge: swiped that way it never falls
+      const past: Vec3 = [pr.p[0] + out[0] * (d + 0.12), 0, pr.p[2] + out[2] * (d + 0.12)];
+      if (!clearXZ(level.colliders, past, past, 0.04, bottom - 0.2, 0.3)) continue;
+      // stand 0.38 m inward of the prop, kept on the surface, with room for a cat (not inside a bookshelf cubby)
+      const inset = (h: number, v: number) => (h < 0.16 ? 0 : clamp(v, -h + 0.13, h - 0.13));
+      const sx = inset(b.half[0], lx - ox * 0.38), sz = inset(b.half[2], lz - oz * 0.38);
+      if ((lx - sx) * ox + (lz - sz) * oz < 0.22) continue; // no room behind it (a mug against the backsplash)
+      const stand: Vec3 = [b.center[0] + sx * Math.cos(r) + sz * Math.sin(r), top, b.center[2] - sx * Math.sin(r) + sz * Math.cos(r)];
+      if (!clearXZ(level.colliders, stand, stand, 0.12, top, 0.42)) continue;
+      best = { dist: d, out, top, stand };
+      break;
+    }
   }
   return best;
+}
+
+/** knock targets: the prop has a free edge and a cat can stand behind it on a surface the nav graph knows */
+const edgeCache = new WeakMap<LevelData, Map<number, { at: string; e: ReturnType<typeof propEdge> }>>();
+function knockEdge(level: LevelData, pr: PropView) {
+  let m = edgeCache.get(level);
+  if (!m) edgeCache.set(level, (m = new Map()));
+  const at = pr.p.map((x) => x.toFixed(2)).join();
+  const hit = m.get(pr.id);
+  if (hit?.at === at) return hit.e;
+  let e = propEdge(level, pr);
+  if (e && !navNodes(level.nav).pos.some((n) => Math.abs(n[1] - e!.top) < 0.3 && distXZ(n, e!.stand) < 0.6)) e = null;
+  m.set(pr.id, { at, e });
+  return e;
 }
 
 class CatBrain implements BotBrain {
@@ -126,8 +149,15 @@ class CatBrain implements BotBrain {
     this.W = WEIGHT[this.pers];
   }
 
+  private ranked = false;
+
   think(v: BotWorldView, dt: number): BotIntent {
     const me = v.self, out: BotIntent = {};
+    if (!this.ranked) {
+      this.ranked = true;
+      const rank = v.chars.filter((c) => c.role === 'cat' && c.bot).findIndex((c) => c.id === me.id);
+      if (rank >= 0) { this.pers = PERS[rank % PERS.length]; this.W = WEIGHT[this.pers]; }
+    }
     const sitter = v.chars.find((c) => c.role === 'sitter');
     this.timeline(v);
     if (me.forced) return this.forced(v, dt, out);
@@ -437,7 +467,10 @@ class CatBrain implements BotBrain {
       if (o.interactable === 'shoes' && v.rng() > 0.15) continue;
       if (o.interactable === 'salmon' && me.item) continue;
       const busy = others.some((c) => c.work?.key === o.key || (c.work && c.work.key.startsWith(`i:${o.interactable}:`)));
-      let mul = o.alert || base >= 5 ? W.disaster : W.mischief;
+      const big = !!o.alert || base >= 5;
+      let mul = big ? W.disaster : W.mischief;
+      // the first half minute: they wander in and get to the big stuff one by one, not all at the bell
+      if (big) mul *= clamp((t - 8) / 25, 0.05, 1);
       if (this.resume && this.resume.key === o.key && this.resume.until > t) mul *= 2.5;
       if (busy) mul *= SHARED.has(o.interactable) ? 1.6 : 0.25;
       if (o.interactable === 'fuseBox' && v.world.lights === false) continue;
@@ -445,17 +478,18 @@ class CatBrain implements BotBrain {
       const score = (base * mul * sitterF(o.at)) / (1 + travel(o.at) / 7);
       cands.push({ score, set: () => this.setUse(v, o, 10 + 25) });
     }
-    // knock things off
+    // knock things off (late in the round, or close to 100, everything goes: disasters get undone, a floor full of stuff doesn't)
+    const crunch = (v.meter > 65 || v.timeLeft < 90 ? 1.8 : 1) * this.D.knock;
     let n = 0;
     for (const pr of v.props) {
       if (pr.fallen || pr.special || pr.home[1] < 0.3 || pr.p[1] < 0.3 || !ok(`p${pr.id}`) || tooClose(pr.p)) continue;
       const d = travel(pr.p);
-      if (d > 14 || n++ > 60) continue;
+      if (d > 14 || n++ > 60 || !knockEdge(v.level, pr)) continue;
       const def = PROP_DEFS[pr.kind];
       const val = def.fallenMess + (def.breaksInto ? MESS_WEIGHTS[def.breaksInto] * 0.8 : 0);
       // sweeping the surface you're already on is cheap
       const here = Math.abs(pr.p[1] - me.p[1]) < 0.35 && distXZ(pr.p, me.p) < 1.8 ? 2 : 1;
-      const score = (val * W.knock * 1.6 * here * (0.4 + sitterF(pr.p) * 0.6)) / (1 + d / 5);
+      const score = (val * W.knock * 1.6 * here * crunch * (0.4 + sitterF(pr.p) * 0.6)) / (1 + d / 5);
       cands.push({ score, set: () => this.knockGoal(v, pr) });
     }
     // loaf on things (Sleepy: on the mess the sitter needs to clean)
@@ -470,11 +504,11 @@ class CatBrain implements BotBrain {
       cands.push({ score: (10 * k * W.disaster) / (1 + travel(tub.pos) / 7), set: () => { this.loafGoal(v, tub.pos, 45); this.goal!.guard = true; } });
     }
     const sun = v.level.sunPatches[0];
-    if (sun) cands.push({ score: (W.loaf * 0.9) / (1 + travel(sun.center) / 8), set: () => this.loafGoal(v, sun.center, 6 + v.rng() * 10) });
+    if (sun) cands.push({ score: (W.loaf * 0.9 * this.D.lazy) / (1 + travel(sun.center) / 8), set: () => this.loafGoal(v, sun.center, 6 + v.rng() * 10) });
     const lb = v.level.spots.find((x) => x.id === 'litterBox');
     if (lb && Number(v.world['litter.fill'] ?? 0) > 0.4) cands.push({ score: (W.loaf * 1.2) / (1 + travel(lb.pos) / 6), set: () => this.loafGoal(v, lb.pos, 8 + v.rng() * 6) });
     // hairball, aimed at the rug
-    if (!me.cd.hairball && !me.item) {
+    if (!me.cd.hairball && !me.item && t > 25 + (this.o.index % 4) * 12) { // nobody hacks at the bell
       const rug = this.nearestRug(v);
       if (rug) cands.push({ score: W.mischief * 1.4 / (1 + travel(rug.c) / 6), set: () => this.hairballGoal(v, rug) });
     }
@@ -484,7 +518,7 @@ class CatBrain implements BotBrain {
       cands.push({ score: 3, set: () => this.begGoal(v, bowl.pos, s) });
     }
     // idle: wander or stare at nothing
-    cands.push({ score: W.idle, set: () => this.idleGoal(v) });
+    cands.push({ score: W.idle * this.D.lazy, set: () => this.idleGoal(v) });
 
     let pickc = cands[0], ps = -Infinity;
     for (const c of cands) {
@@ -497,7 +531,7 @@ class CatBrain implements BotBrain {
   }
 
   private knockGoal(v: BotWorldView, pr: PropView) {
-    const e = propEdge(v.level, pr);
+    const e = knockEdge(v.level, pr);
     const out = e?.out ?? fwd(yawTo(v.self.p, pr.p));
     const stand: Vec3 = e?.stand ?? [pr.p[0] - out[0] * 0.38, pr.p[1], pr.p[2] - out[2] * 0.38];
     // watched and right at the edge: the slow push, staring back
@@ -601,11 +635,13 @@ class CatBrain implements BotBrain {
       case 'knock': case 'push': {
         const pr = v.props.find((p) => p.id === g.prop);
         if (!pr || pr.fallen || pr.p[1] < pr.home[1] - 0.25) return this.done(v, out);
-        if (!walk(0.25) && distXZ(me.p, pr.p) > 0.6) return out;
+        // up on its surface (from the floor below a swipe only shoves it back toward the wall)
+        const onTop = !!g.at && Math.abs(me.p[1] - g.at[1]) < 0.3 && me.g;
+        if (!walk(0.25) && !(onTop && distXZ(me.p, pr.p) < 0.6)) return out;
         this.w.stop();
         g.arrived = true;
         g.since ??= v.time;
-        if (v.time - g.since > 6) { this.bad.set(`p${pr.id}`, v.time + 20); return this.done(v, out); } // out of reach after all
+        if (!onTop || v.time - g.since > 4) { this.bad.set(`p${pr.id}`, v.time + 45); return this.done(v, out); } // out of reach after all
         out.faceYaw = g.face ?? yawTo(me.p, pr.p);
         const d = distXZ(me.p, pr.p);
         if (d > 0.5) out.moveTo = [pr.p[0] - Math.sin(out.faceYaw) * 0.3, pr.p[1], pr.p[2] - Math.cos(out.faceYaw) * 0.3];
@@ -619,7 +655,7 @@ class CatBrain implements BotBrain {
           this.swipeT = 0.55 + v.rng() * 0.3;
           if (v.rng() < 0.15) out.meow = true;
           if (g.t === undefined) g.t = v.time;
-          if (v.time - g.t > 4) { this.bad.set(`p${pr.id}`, v.time + 20); return this.done(v, out); }
+          if (v.time - g.t > 3) { this.bad.set(`p${pr.id}`, v.time + 45); return this.done(v, out); }
         }
         return out;
       }
@@ -709,7 +745,7 @@ class CatBrain implements BotBrain {
   private fail(v: BotWorldView, out: BotIntent = {}): BotIntent {
     const g = this.goal;
     if (g?.key) this.bad.set(g.key, v.time + 10);
-    if (g?.prop !== undefined) this.bad.set(`p${g.prop}`, v.time + 15);
+    if (g?.prop !== undefined) this.bad.set(`p${g.prop}`, v.time + 40);
     return this.done(v, out);
   }
 

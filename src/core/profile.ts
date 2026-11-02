@@ -45,3 +45,23 @@ export function loadProfile(): Profile {
 export function saveProfile(p: Profile) {
   try { localStorage.setItem(KEY, JSON.stringify(p)); } catch { /* ignore */ }
 }
+
+/** the local pause card is up: a solo host stops its sim (online games keep running) */
+export const localUi = { paused: false };
+
+/** live settings (mouse sensitivity, master volume), kept apart from the profile so the pause card can save them too */
+const SKEY = 'meowhem.settings';
+export const settings = { sens: 1, vol: 0.9 };
+try { Object.assign(settings, JSON.parse(localStorage.getItem(SKEY) ?? '{}')); } catch { /* blocked storage */ }
+/** main.ts points `volume` at the audio master gain */
+export const settingsHooks: { volume: ((v: number) => void) | null } = { volume: null };
+export function setSetting(k: keyof typeof settings, v: number) {
+  settings[k] = v;
+  try { localStorage.setItem(SKEY, JSON.stringify(settings)); } catch { /* ignore */ }
+  if (k === 'vol') settingsHooks.volume?.(v);
+}
+/** the two sliders, shared by the title screen and the pause card */
+export const settingsHtml = () => `<div class="settings"><label>Mouse<input type="range" data-set="sens" min="0.3" max="2.5" step="0.05" value="${settings.sens}"></label><label>Volume<input type="range" data-set="vol" min="0" max="1" step="0.05" value="${settings.vol}"></label></div>`;
+export function bindSettings(root: HTMLElement) {
+  root.querySelectorAll<HTMLInputElement>('[data-set]').forEach((i) => i.addEventListener('input', () => setSetting(i.dataset.set as keyof typeof settings, Number(i.value))));
+}

@@ -98,6 +98,8 @@ export class Interactions {
     if (!ignoreRange && (d > range || dy > 1.3)) return;
     // raised spots (laptop, salmon, fish tank, pillow) are worked from up there, not from the floor below
     if (!ignoreRange && c.s.role === 'cat' && anchor[1] - p[1] > 0.35) return;
+    // ...and floor spots aren't worked from a counter or table above them (the bowl under the counter). The tap is drunk from up there.
+    if (!ignoreRange && c.s.role === 'cat' && p[1] - anchor[1] > 0.6 && def?.id !== 'sink') return;
     const chk = use.check ? use.check(this.sim.ctx, s, c.s) : true;
     if (chk === false) return;
     let ok = chk === true;
@@ -110,7 +112,7 @@ export class Interactions {
   }
 
   /** highest progress of a cat use (shared bar, or the best cat on a per-cat bar) */
-  private useProgress(key: string): number {
+  useProgress(key: string): number {
     let m = 0;
     for (const [k, v] of this.progress) if (k === key || k.startsWith(`${key}@`)) m = Math.max(m, v);
     return m;
@@ -228,7 +230,7 @@ export class Interactions {
    *  ADDENDUM 3.3: cat bots work slower on easier difficulties. */
   private scaleMul(c: SimChar, use: Use<any>) {
     if (c.s.role !== 'cat') return 1;
-    const bot = c.brain ? 1 / (BOT_DIFF[this.sim.cfg.botDifficulty]?.work ?? 1) : 1;
+    const bot = c.brain ? 1 / (BOT_DIFF[this.sim.diff.cat]?.work ?? 1) : 1;
     return (use.alert || use.undo ? 1 / this.sim.sc.work : 1) * bot;
   }
 

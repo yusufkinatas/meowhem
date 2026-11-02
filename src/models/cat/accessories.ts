@@ -23,12 +23,16 @@ interface Part {
   pre?: [number, number, number];
   /** euler applied after fitting, around the anchor */
   rot?: [number, number, number];
-  /** material override, e.g. the see-through vet cone */
-  tint?: { color: string; opacity?: number };
-  /** reshape the source (source units, before `pre`): vertices below y = minY collapse onto it, radius capped at maxR */
-  trim?: { minY: number; maxR: number };
+  /** see-through plastic (the vet cone): clear where you look through it, milky where it curves away, so it reads as a shell */
+  plastic?: { color: string };
+  /**
+   * reshape a round source (source units, before `pre`): vertices below y = minY collapse onto it, radius capped at maxR,
+   * radii remapped so the narrowest ring is `neck` x the widest, and the length above minY scaled by `stretch`
+   */
+  reshape?: { minY: number; maxR: number; neck: number; stretch: number };
 }
-interface Def { parts: Part[]; collar?: string }
+/** low: head-space points that must stay above the floor (the cat lifts its chin); hug: widens with chonk like the body (hats keep their shape) */
+interface Def { parts: Part[]; collar?: string; low?: [number, number, number][]; hug?: boolean }
 
 const BASE = `${import.meta.env.BASE_URL}models/accessories/`;
 const crown = (): Part[] => [-0.5, -0.25, 0, 0.25, 0.5].map((x, i) => ({
@@ -42,9 +46,11 @@ const DEFS: Partial<Record<CatAccessory, Def>> = {
   bow: { parts: [{ file: 'bowtie.glb', fit: 'w', size: 0.74, at: [0.3, 0.7, 0.5], y: 'center', rot: [0.15, -0.25, 0.42] }] },
   bell: { collar: '#d9473a', parts: [{ file: 'bell.glb', fit: 'w', size: 0.24, at: [0, -0.33, 0.66], y: 'top', z: 'center' }] },
   flowerCrown: { parts: crown() },
-  cone: { parts: [{ file: 'cone.glb', fit: 'w', size: 2.05, at: [0, -0.02, 1.2], y: 'center', z: 'front', pre: [Math.PI / 2, 0, 0], tint: { color: '#e4f4ff', opacity: 0.55 },
-    // the source is a kitchen funnel: drop its spout (it poked out of the cat's back) and the side tab
-    trim: { minY: 0.75, maxR: 0.97 } }] },
+  // the source is a kitchen funnel: spout and side tab dropped, the cone widened at the neck so it rings the cube head
+  // (ears inside, narrow end behind them) and flares 0.3 head-widths past the nose; tilted up so the rim clears the floor
+  cone: { parts: [{ file: 'cone.glb', fit: 'w', size: 2.3, at: [0, 0.3, 0.95], y: 'center', z: 'front', pre: [Math.PI / 2, 0, 0], rot: [-0.18, 0, 0],
+    plastic: { color: '#dff1ff' }, reshape: { minY: 0.75, maxR: 0.97, neck: 0.64, stretch: 1.2 } }],
+    low: [[0, -0.83, 1.16], [0.82, -0.49, 1.09], [-0.82, -0.49, 1.09]], hug: true },
 };
 /** the accessories that have a model (CAT_ACCESSORIES) */
 export const ACCESSORIES = Object.keys(DEFS) as CatAccessory[];
@@ -87,20 +93,49 @@ function fitPart(src: THREE.Object3D, p: Part): THREE.Object3D {
   return placed;
 }
 
-function trimSource(src: THREE.Object3D, t: NonNullable<Part['trim']>) {
+function reshapeSource(src: THREE.Object3D, t: NonNullable<Part['reshape']>) {
   src.traverse((o) => {
     const m = o as THREE.Mesh;
-    if (!m.isMesh || m.userData.trimmed) return;
-    m.userData.trimmed = true;
+    if (!m.isMesh || m.userData.reshaped) return;
+    m.userData.reshaped = true;
     const pos = m.geometry.attributes.position as THREE.BufferAttribute;
+    let rMin = Infinity;
+    for (let i = 0; i < pos.count; i++) if (pos.getY(i) >= t.minY) rMin = Math.min(rMin, Math.hypot(pos.getX(i), pos.getZ(i)));
     for (let i = 0; i < pos.count; i++) {
-      const x = pos.getX(i), z = pos.getZ(i), r = Math.hypot(x, z), k = r > t.maxR ? t.maxR / r : 1;
-      pos.setXYZ(i, x * k, Math.max(t.minY, pos.getY(i)), z * k);
+      const x = pos.getX(i), z = pos.getZ(i), r = Math.max(1e-6, Math.hypot(x, z));
+      const rc = Math.min(t.maxR, Math.max(rMin, r));
+      const k = t.maxR * (t.neck + (1 - t.neck) * (rc - rMin) / (t.maxR - rMin)) / r;
+      pos.setXYZ(i, x * k, t.minY + (Math.max(t.minY, pos.getY(i)) - t.minY) * t.stretch, z * k);
     }
     pos.needsUpdate = true;
+    m.geometry.computeVertexNormals();
     m.geometry.computeBoundingBox();
     m.geometry.computeBoundingSphere();
   });
+}
+
+/**
+ * fresnel plastic: alpha 0.12 looking straight through, ~0.85 at grazing angles (outline-like edges), drawn back faces
+ * first; the band above source height rimY (the funnel's lip) is a solid blue edge, so the opening reads from the front
+ */
+function plasticMats(color: string, rimY: number): [THREE.MeshToonMaterial, THREE.MeshToonMaterial] {
+  return [THREE.BackSide, THREE.FrontSide].map((side) => {
+    const m = new THREE.MeshToonMaterial({ color, gradientMap: gradientMap(), transparent: true, depthWrite: false, side });
+    m.onBeforeCompile = (sh) => {
+      sh.vertexShader = sh.vertexShader
+        .replace('#include <common>', '#include <common>\nvarying float vSrcY;')
+        .replace('#include <begin_vertex>', '#include <begin_vertex>\nvSrcY = position.y;');
+      sh.fragmentShader = sh.fragmentShader.replace('#include <common>', '#include <common>\nvarying float vSrcY;').replace('#include <opaque_fragment>', `
+        float fres = 1.0 - abs(dot(normalize(normal), normalize(vViewPosition)));
+        float rim = smoothstep(${(rimY - 0.03).toFixed(3)}, ${rimY.toFixed(3)}, vSrcY);
+        diffuseColor.a = max(mix(0.12, 0.85, pow(fres, 2.2)), 0.9 * rim);
+        outgoingLight *= mix(1.08, 0.82, fres);
+        outgoingLight = mix(outgoingLight, outgoingLight * vec3(0.62, 0.8, 1.0), rim);
+        #include <opaque_fragment>`);
+    };
+    m.customProgramCacheKey = () => `meowhem-cat-plastic-${rimY.toFixed(3)}`;
+    return m;
+  }) as [THREE.MeshToonMaterial, THREE.MeshToonMaterial];
 }
 
 const files = new Map<string, Promise<THREE.Group | null>>();
@@ -132,11 +167,19 @@ function load(a: CatAccessory): Promise<THREE.Object3D | null> {
       const g = new THREE.Group();
       g.name = `acc:${a}`;
       def.parts.forEach((p, i) => {
-        if (p.trim) trimSource(srcs[i]!, p.trim);
+        if (p.reshape) reshapeSource(srcs[i]!, p.reshape);
         const part = fitPart(srcs[i]!, p);
-        if (p.tint) {
-          const mat = new THREE.MeshToonMaterial({ color: p.tint.color, gradientMap: gradientMap(), transparent: (p.tint.opacity ?? 1) < 1, opacity: p.tint.opacity ?? 1, depthWrite: false, side: THREE.DoubleSide });
-          part.traverse((o) => { const m = o as THREE.Mesh; if (m.isMesh) { m.material = mat; m.castShadow = false; m.renderOrder = 2; } });
+        if (p.plastic) {
+          const meshes: THREE.Mesh[] = [];
+          part.traverse((o) => { if ((o as THREE.Mesh).isMesh) meshes.push(o as THREE.Mesh); });
+          meshes[0].geometry.computeBoundingBox();
+          const [back, front] = plasticMats(p.plastic.color, meshes[0].geometry.boundingBox!.max.y - 0.08);
+          for (const m of meshes) {
+            m.material = back; m.castShadow = false; m.receiveShadow = false; m.renderOrder = 2;
+            const f = new THREE.Mesh(m.geometry, front);
+            f.renderOrder = 3;
+            m.add(f);
+          }
         }
         g.add(part);
       });
@@ -149,6 +192,12 @@ function load(a: CatAccessory): Promise<THREE.Object3D | null> {
 
 /** collar band color painted into the fur (bell collar), if any */
 export const collarFor = (a: CatAccessory): string | undefined => DEFS[a]?.collar;
+
+/** rim points that would dig into the floor in low poses, if any */
+export const accessoryLow = (a: CatAccessory) => DEFS[a]?.low;
+
+/** rings the body (the cone), so it must widen with chonk instead of keeping its shape */
+export const accessoryHugs = (a: CatAccessory) => !!DEFS[a]?.hug;
 
 /** a fresh instance (shares geometry + materials), or null if missing */
 export async function accessoryFor(a: CatAccessory): Promise<THREE.Object3D | null> {

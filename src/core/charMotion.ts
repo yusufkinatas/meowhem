@@ -72,12 +72,13 @@ export class CharMotion {
   }
 
   teleport(p: Vec3, yaw?: number) {
-    this.pos = [...p];
+    // land just outside the controller's 0.02 m skin: exactly on the floor it stalls for frames while it unsticks
+    this.pos = [p[0], p[1] + 0.02, p[2]];
     if (yaw !== undefined) this.yaw = yaw;
     this.vel = [0, 0, 0];
     this.charge = 0;
     this.holdT = 0;
-    const t = { x: p[0], y: p[1] + this.lift, z: p[2] };
+    const t = { x: p[0], y: this.pos[1] + this.lift, z: p[2] };
     this.body.setTranslation(t, true);
     this.body.setNextKinematicTranslation(t);
     this.world.propagateModifiedBodyPositionsToColliders();

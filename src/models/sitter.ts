@@ -349,7 +349,7 @@ export function createSitter(look: SitterLook): SitterModelApi {
   if (hasModel('phone')) {
     const ph = cloneModel('phone');
     ph.rotation.x = -Math.PI / 2; // upright, screen toward the face
-    ph.scale.setScalar(1.5);
+    ph.scale.setScalar(1.15);
     ph.position.set(0, 0.1, 0.03); // sticks up out of the mitten
     phoneH.add(ph);
   }

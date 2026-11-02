@@ -244,7 +244,7 @@ function view(name: string) {
     // anims standing on the real floor, low camera: checks ground contact (no floating, nothing in the floor)
     const list = (params.get('anims') ?? 'idle,sit,loaf,sleep,eat,poop,hairball,groom').split(',') as CatAnim[];
     const yaw = +(params.get('yaw') ?? 1.2);
-    list.forEach((a, k) => addCell(look(preset, { chonk: +(params.get('chonk') ?? 0.2) }), (k - (list.length - 1) / 2) * 0.62, 0, a, (s, t) => {
+    list.forEach((a, k) => addCell(look(preset, { chonk: +(params.get('chonk') ?? 0.2), accessory: (params.get('acc') as CatAccessory) ?? 'none' }), (k - (list.length - 1) / 2) * 0.62, 0, a, (s, t) => {
       s.anim = a; s.face = (params.get('face') as CatFace) ?? 'neutral';
       s.speed = a === 'walk' || a === 'carryMouth' ? 2.6 : a === 'run' ? 5.8 : 0;
       s.pounceCharge = 0.8; s.wiggle = a === 'caged' ? 1 : 0; s.puffed = params.get('puff') === '1'; s.wet = +(params.get('wet') ?? 0);
@@ -253,14 +253,30 @@ function view(name: string) {
     camLook.set(0, 1.0, 5);
     camera.position.set(0, +(params.get('camY') ?? 0.12), 0.75 * list.length);
     controls.target.set(0, 0.12, 0);
+  } else if (name === 'tails') {
+    // tail check from the game camera's angle (~20 deg down): one anim per page, columns = back, back 3/4, side, front 3/4
+    const a = (params.get('anim') ?? 'idle') as CatAnim;
+    const yaws = [Math.PI, Math.PI * 0.75, Math.PI / 2, 0.35];
+    yaws.forEach((yaw, ci) => {
+      addCell(look(preset, { accessory: (params.get('acc') as CatAccessory) ?? 'none', chonk: +(params.get('chonk') ?? 0.2) }), (ci - 1.5) * 0.7, 0, ci === 0 ? a : '', (s) => {
+        s.anim = a; s.face = (params.get('face') as CatFace) ?? 'neutral';
+        s.speed = a === 'walk' || a === 'carryMouth' ? 2.6 : a === 'run' ? 5.8 : 0;
+        s.carrying = a === 'carryMouth' ? 'salmon' : null;
+        s.grounded = !(a === 'jump' || a === 'fall'); s.vy = a === 'jump' ? 3 : a === 'fall' ? -3 : 0;
+        s.pounceCharge = 0.8; s.wet = +(params.get('wet') ?? 0); s.puffed = params.get('puff') === '1';
+      }, yaw);
+    });
+    camera.position.set(0, 1.25, 2.9);
+    controls.target.set(0, 0.2, 0);
   } else if (name === 'carrier') {
-    // scale check: a caged cat inside the real carrier basket (the sim puts it 0.1 m in front of the basket centre), any yaw
+    // scale check: a caged cat inside the real carrier basket (the sim parks it at the basket centre), any yaw; &acc= &chonk= &open=1 hides the basket
     [0, Math.PI / 2, -2.688].forEach((yaw, i) => {
       const x = (i - 1) * 0.9;
       const basket = cloneModel('carrier');
       basket.position.set(x, 0, 0);
+      basket.visible = params.get('open') !== '1';
       group.add(basket);
-      addCell(look(['orangeTabby', 'tuxedo', 'calico'][i]), x, 0.1, `yaw ${yaw.toFixed(2)}`, (s, t) => { s.anim = 'caged'; s.face = 'sad'; s.wiggle = Math.sin(t * 0.9) > 0.4 ? 1 : 0; }, yaw);
+      addCell(look(['orangeTabby', 'tuxedo', 'calico'][i], { accessory: (params.get('acc') as CatAccessory) ?? 'none', chonk: +(params.get('chonk') ?? 0.2) }), x, 0, `yaw ${yaw.toFixed(2)}`, (s, t) => { s.anim = 'caged'; s.face = 'sad'; s.wiggle = Math.sin(t * 0.9) > 0.4 ? 1 : 0; }, yaw);
     });
     camera.position.set(0.4, 1.1, 1.9);
     controls.target.set(0, 0.15, 0);

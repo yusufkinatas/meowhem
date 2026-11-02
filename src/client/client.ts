@@ -7,7 +7,7 @@ import * as THREE from 'three';
 import type { AudioApi, CatTvApi, FxApi, LevelData, MinigameApi, MinigameHost, MinigameKind, RoomId, Role, SoundName, SpotId, TvShow, Vec3, WorldVisualValue } from '../shared/contracts';
 import { CFG } from '../config';
 import { createFx, createCatTv, openMinigame } from '../registry';
-import { buildStaticWorld, type StaticWorld } from '../core/physics';
+import { buildStaticWorld, lineOfSight, rayDist, type StaticWorld } from '../core/physics';
 import { CharMotion } from '../core/charMotion';
 import { clamp, distXZ } from '../core/math';
 import type { Action, CharState, GameConfig, GameEvent, Results, Snapshot } from '../core/types';
@@ -43,13 +43,14 @@ const MG_SPOT: Partial<Record<MinigameKind, SpotId>> = {
 };
 /** spot cam per spot (ADDENDUM M23): back, up, target height above the spot, target ahead, sideways (so the cat doesn't block it) */
 const SPOT_CAM: Partial<Record<SpotId, [number, number, number, number, number]>> = {
-  tubFaucet: [0.9, 1.1, 0.6, 0.35, 0.25], curtains: [2.2, 1.0, 1.3, 0.35, 0.3], fishTank: [0.6, 1.35, 1.0, 0.45, 0.2],
+  tubFaucet: [0.9, 1.1, 0.6, 0.35, 0.25], curtains: [2.2, 1.0, 1.3, 0.15, 0.3], fishTank: [0.6, 1.35, 1.0, 0.45, 0.2],
   window: [1.2, 0.8, 0.9, 0.5, 0.3], laptop: [0.9, 0.85, 0.2, 0.35, 0.6],
 };
 const HOLD_PUSH = 0.25, HOLD_HAIRBALL = 0.6, HITSTOP = 0.08;
 
 const v3 = (p: Vec3) => new THREE.Vector3(p[0], p[1], p[2]);
 const _a = new THREE.Vector3();
+const UP: [number, number, number] = [0, 1, 0];
 
 export class ClientGame {
   readonly views: Views;
@@ -83,6 +84,9 @@ export class ClientGame {
   private lastSprayAt = -9;
   private hissAt = -9;
   private myFur: string;
+  private faded = new Set<string>();
+  private pullAt = new THREE.Vector3();
+  private fadeMats = new WeakMap<THREE.Mesh, { orig: THREE.Material | THREE.Material[]; ghost: THREE.Material | THREE.Material[] }>();
   fps = 0;
   /** tests: treat the pointer as locked */
   forceLocked = false;
@@ -99,14 +103,15 @@ export class ClientGame {
     this.fx = createFx(r.scene);
     this.tv = createCatTv();
     o.level.setTvTexture(this.tv.texture);
-    this.camera = new TpsCamera(r.camera);
+    this.camera = new TpsCamera(r.camera, o.level.doors);
     this.sw = buildStaticWorld(o.level);
     const mine = o.cfg.players.find((p) => p.id === o.myId)!;
     this.myFur = mine.look.furColor;
     const spawn = mine.role === 'sitter' ? o.level.spawns.sitter : o.level.spawns.cats[o.cfg.players.filter((p) => p.role === 'cat').indexOf(mine) % o.level.spawns.cats.length];
     this.motion = new CharMotion(this.sw.world, mine.role, spawn, spawnYaw(o.level, mine.role, spawn));
     this.camera.yaw = this.motion.yaw;
-    this.hud = new Hud(o.ui, o.cfg.players, o.myId);
+    this.hud = new Hud(o.ui, o.cfg.players, o.myId, o.online);
+    this.hud.canSee = (a, b) => lineOfSight(this.sw.world, [a.x, a.y, a.z], [b.x, b.y, b.z]);
     for (const s of o.level.spots) this.hud.spotRoom.set(s.id, s.room);
     this.hud.onLeave = () => o.onLeave();
     this.hud.onResume = () => o.input.lock();
@@ -364,8 +369,10 @@ export class ClientGame {
     // ---------------------------------------------------------------- local motion
     if (me.tp !== this.tpSeen) {
       this.tpSeen = me.tp;
+      // ?autobot resyncs the bot-driven player every snapshot: only a real jump cuts the camera there
+      const far = !this.o.cfg.autobot?.includes(this.o.myId) || Math.hypot(me.p[0] - this.motion.pos[0], me.p[1] - this.motion.pos[1], me.p[2] - this.motion.pos[2]) > 0.5;
       this.motion.teleport(me.p, me.yaw);
-      this.camera.snap();
+      if (far) this.camera.snap();
     }
     if (me.forced) this.motion.teleport(me.p, me.yaw);
     else {
@@ -397,12 +404,23 @@ export class ClientGame {
     this.show?.update(dt);
     const myView = this.views.chars.get(this.o.myId)!;
     this.camera.wobble = me.st.catnip ? 1 : 0;
-    // hypnotized: turn toward the TV. Carried: swing around to the front, so the sitter holding you is in the shot
+    // hypnotized: turn toward the TV. Carried: face the sitter holding you (a point behind her, so the camera
+    // ends up in front of her face, whichever hand you dangle from)
     const holder = me.grabbedBy ? this.views.chars.get(me.grabbedBy) : undefined;
-    this.camera.pull = me.st.hypnotized && me.lookAt ? v3(me.lookAt) : holder ? holder.pos : null;
+    const hy = holder?.root.rotation.y ?? 0;
+    this.camera.pull = me.st.hypnotized && me.lookAt ? v3(me.lookAt) : holder ? this.pullAt.set(holder.pos.x - Math.sin(hy) * 6, holder.pos.y, holder.pos.z - Math.cos(hy) * 6) : null;
     this.camera.mode = me.grabbedBy ? 'carried' : role === 'sitter' && me.holding ? 'holding' : 'normal';
     this.camera.update(dt, myView.pos, role, this.sw.world);
     myView.root.visible = !this.camera.tooClose || !!this.show;
+    this.fadeView(myView, this.show ? 1 : this.camera.fade);
+    // anyone else the camera ends up inside (the sitter right behind a cat): see-through, not a wall of shirt
+    const cp = this.o.renderer.camera.position;
+    for (const v of this.views.chars.values()) {
+      if (v === myView) continue;
+      const cat = v.info.role === 'cat', r = cat ? 0.22 : 0.34, lo = v.pos.y + r, hi = v.pos.y + (cat ? 0.45 : 1.75) - r;
+      const d = Math.hypot(cp.x - v.pos.x, cp.y - clamp(cp.y, lo, hi), cp.z - v.pos.z) - r;
+      this.fadeView(v, this.show ? 1 : clamp(d / 0.35, 0.12, 1));
+    }
     const R = this.o.renderer;
     R.setLook(dt, !dark || !!this.show, role, !!me.st.catnip); // the owners switch the lights on for the end show
     if (role === 'sitter' && R.flashlight.visible) {
@@ -449,7 +467,14 @@ export class ClientGame {
         ? { ...s, loaf: this.loaf, charge: this.motion.charge, gest: (this.localGest.t > 0 ? this.localGest.g : s.gest) as CharState['gest'], st: this.lmb.push ? { ...s.st, pushMode: 1 } : s.st }
         : s;
       const grounded = mine ? this.motion.grounded : s.g;
-      if (v.cat) v.cat.update(dt, catVisual(vis, v.speed, v.vy, grounded));
+      if (v.cat) {
+        const cv = catVisual(vis, v.speed, v.vy, grounded);
+        // free height over the cat (under the bed, a table): over its middle and its head, so a hat never pokes the edge first
+        const p = v.pos, fx = Math.sin(v.yaw) * 0.18, fz = Math.cos(v.yaw) * 0.18;
+        const up = Math.min(rayDist(this.sw.world, [p.x, p.y + 0.05, p.z], UP, 1), rayDist(this.sw.world, [p.x + fx, p.y + 0.05, p.z + fz], UP, 1));
+        if (up < 0.95) cv.ceiling = up + 0.05;
+        v.cat.update(dt, cv);
+      }
       if (v.sitter) {
         const heldCat = s.holding ? snap.chars.find((c) => c.id === s.holding) : undefined;
         v.sitter.update(dt, sitterVisual(vis, v.speed, v.vy, grounded, { meter: snap.meter, ended: null, dark, aimPitch: mine ? this.camera.pitch : 0, heldNoodle: !!heldCat?.st.noodle }));
@@ -511,6 +536,34 @@ export class ClientGame {
   }
 
   private gest(g: string, t: number) { this.localGest = { g, t }; }
+
+  /** a character the camera is squeezed against or inside: see-through instead of gone (hiding it is the last resort) */
+  private fadeView(v: CharView, a: number) {
+    const on = a < 0.99;
+    if (!on && !this.faded.has(v.id)) return;
+    if (on) this.faded.add(v.id); else this.faded.delete(v.id);
+    v.root.traverse((o) => {
+      const m = o as THREE.Mesh;
+      if (!m.isMesh) return;
+      let f = this.fadeMats.get(m);
+      if (!on) { if (f && m.material === f.ghost) m.material = f.orig; return; }
+      if (!f || (m.material !== f.ghost && m.material !== f.orig)) {
+        // per-mesh clones: materials are shared between characters and props (toon cache, outlines)
+        const ghost = (src: THREE.Material) => {
+          const g = src.clone();
+          g.transparent = true;
+          g.userData.opacity = src.opacity;
+          if (g.side === THREE.BackSide) g.visible = false; // outline shells read as a dark blob through the body
+          else g.side = THREE.FrontSide; // (double-sided KayKit parts: the inside of the face shows through the back of the head)
+          return g;
+        };
+        f = { orig: m.material, ghost: Array.isArray(m.material) ? m.material.map(ghost) : ghost(m.material) };
+        this.fadeMats.set(m, f);
+      }
+      m.material = f.ghost;
+      for (const g of Array.isArray(f.ghost) ? f.ghost : [f.ghost]) g.opacity = a * (g.userData.opacity as number);
+    });
+  }
 
   private sendMove() {
     this.moveAcc = 0;

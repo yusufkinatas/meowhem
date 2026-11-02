@@ -2,7 +2,7 @@
 import type { CatLook, Role, SoundName } from '../shared/contracts';
 import { CFG } from '../config';
 import type { Difficulty, LobbyState } from '../core/types';
-import { COAT_PRESETS, EYE_COLORS, PATTERNS, type Profile } from '../core/profile';
+import { COAT_PRESETS, EYE_COLORS, PATTERNS, bindSettings, settingsHtml, type Profile } from '../core/profile';
 import { CAT_ACCESSORIES } from '../registry';
 import { CatPreview } from './catPreview';
 
@@ -95,9 +95,11 @@ export class Menu {
       <div class="controls-hint">
         <div><span class="who">Cat</span>${k('WASD')} move ${k('Shift')} zoom ${k('Space')} jump, hold to pounce ${k('LMB')} swipe ${k('E')} paw ${k('Q')} meow ${k('R')} hiss, hold for a hairball ${k('F')} loaf</div>
         <div><span class="who">Sitter</span>${k('LMB')} spray, or throw a held cat ${k('E')} grab, clean ${k('R')} clap ${k('Q')} treats</div>
+        ${settingsHtml()}
       </div>
     </div>`);
     const $ = <T extends HTMLElement>(sel: string) => this.root.querySelector(sel) as T;
+    bindSettings(this.root);
     this.preview.mount($('.pv-host'), { ...p.look, name: p.name || 'Cat' });
     const save = (poke = false) => {
       p.name = $<HTMLInputElement>('#m-name').value.trim().slice(0, 16);
@@ -107,7 +109,7 @@ export class Menu {
       this.onProfile(p);
       if (poke) this.preview.setLook(p.look);
     };
-    this.root.querySelectorAll('input,select').forEach((x) => x.addEventListener('change', () => save(x.id === 'm-chonk')));
+    this.root.querySelectorAll('input[id],select').forEach((x) => x.addEventListener('change', () => save(x.id === 'm-chonk')));
     $<HTMLInputElement>('#m-chonk').addEventListener('input', () => save(true));
     $<HTMLInputElement>('#m-code').addEventListener('input', (e) => {
       const t = e.target as HTMLInputElement;

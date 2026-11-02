@@ -87,6 +87,7 @@ export function catVisual(s: CharState, speed: number, vy: number, grounded: boo
   else if (st.tossed || st.shock) face = 'shock';
   else if (st.noodle) face = 'sleepy';
   else if (s.grabbedBy) face = 'unimpressed';
+  else if (st.caged) face = 'sad';
   else if (st.flehmen) face = 'flehmen';
   else if (st.catnip) face = 'derp';
   else if (st.stunned || st.fight) face = 'shock';

@@ -67,6 +67,7 @@ export interface CatVisualState {
   carrying?: 'salmon' | 'toyMouse' | 'sock' | null;
   noodle?: boolean;         // held and gone boneless (purring)
   tossed?: boolean;         // airborne after a toss or slip launch
+  ceiling?: number;         // free height above the feet in m (under the bed, a table), omitted when > ~1 m
 }
 
 export interface SitterVisualState {

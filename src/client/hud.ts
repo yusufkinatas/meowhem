@@ -3,6 +3,7 @@ import * as THREE from 'three';
 import type { RoomId, Role } from '../shared/contracts';
 import { scaleFor } from '../config';
 import type { Alert, CharState, PlayerInfo, Snapshot } from '../core/types';
+import { bindSettings, localUi, settingsHtml } from '../core/profile';
 
 const el = <K extends keyof HTMLElementTagNameMap>(tag: K, cls = '', html = '') => {
   const e = document.createElement(tag);
@@ -58,21 +59,29 @@ export class Hud {
   private tagEls = new Map<string, HTMLElement>();
   private todoEls = new Map<string, HTMLElement>();
   private ammoMax: number;
+  private mgWas = false;
+  /** the mouse was let go by a panel, not by the player */
+  private freed = false;
+  private onKey = (e: KeyboardEvent) => { if (e.code === 'Escape' && this.freed) { this.freed = false; this.cache.delete('lock'); } };
   /** spot id -> room (for the to-do wobble), set by the client */
   spotRoom = new Map<string, RoomId>();
   onLeave: (() => void) | null = null;
   onResume: (() => void) | null = null;
+  /** line of sight against walls and closed doors (set by the client). Without it, tags show through walls. */
+  canSee: ((from: THREE.Vector3, to: THREE.Vector3) => boolean) | null = null;
   /** client's current world keys (set by the client) */
   world: Record<string, unknown> = {};
 
-  constructor(parent: HTMLElement, private roster: PlayerInfo[], private myId: string) {
+  constructor(parent: HTMLElement, private roster: PlayerInfo[], private myId: string, online = false) {
     this.meter.append(this.meterFill, el('div', 'meter-ticks', '<i></i><i></i><i></i>'), this.meterText);
     const top = el('div', 'hud-top');
     const clock = el('div', 'clock');
     clock.append(this.timer, this.timerSub);
     top.append(this.meter, clock);
     this.prompt.innerHTML = `<div class="key"><svg viewBox="0 0 44 44"><circle class="ring-bg" cx="22" cy="22" r="19"/><circle class="ring" cx="22" cy="22" r="19"/></svg><span>E</span></div><div class="label"></div>`;
-    this.lockHint.innerHTML = `<div class="card"><div class="lh-title">Paused</div><div class="lh-sub">Click to look around. Esc frees the mouse.</div><div class="row"><button class="btn primary" data-a="resume">Resume</button><button class="btn" data-a="leave">Leave game</button></div></div>`;
+    this.lockHint.innerHTML = `<div class="card"><div class="lh-title">${online ? 'Mouse free' : 'Paused'}</div><div class="lh-sub">${online ? 'The round keeps going. Click to look around.' : 'Click to look around. Esc frees the mouse.'}</div>${settingsHtml()}<div class="row"><button class="btn primary" data-a="resume">Resume</button><button class="btn" data-a="leave">Leave game</button></div></div><div class="lh-soft">Click to look around</div>`;
+    window.addEventListener('keydown', this.onKey);
+    bindSettings(this.lockHint);
     this.lockHint.addEventListener('click', (e) => {
       const a = (e.target as HTMLElement).dataset.a;
       if (a === 'leave') this.onLeave?.();
@@ -168,7 +177,18 @@ export class Hud {
     if (mash) (this.mash.querySelector('i') as HTMLElement).style.width = `${Math.round(me.mash * 100)}%`;
 
     this.crosshair.style.display = role === 'sitter' && extras.locked && snap.phase === 'playing' ? 'block' : 'none';
-    this.set('lock', String(!extras.locked && !extras.mgOpen && !extras.ended && snap.phase === 'playing'), (v) => this.lockHint.classList.toggle('show', v === 'true'));
+    // a panel (minigame) let the mouse go: take it back when the panel closes. If the browser says no, a small
+    // "click" hint instead of the pause card, the player never asked to pause
+    const live = !extras.ended && snap.phase === 'playing';
+    if (this.mgWas && !extras.mgOpen && live && !extras.locked) { this.freed = true; this.onResume?.(); }
+    this.mgWas = extras.mgOpen;
+    if (extras.locked || !live) this.freed = false;
+    const off = !extras.locked && !extras.mgOpen && live;
+    this.set('lock', !off ? '' : this.freed ? 'soft' : 'pause', (v) => {
+      this.lockHint.classList.toggle('show', !!v);
+      this.lockHint.classList.toggle('soft', v === 'soft');
+      localUi.paused = v === 'pause';
+    });
 
     // to-do list (cats), alerts (sitter)
     const showTodo = role === 'cat' && !extras.mgOpen && snap.phase !== 'ended';
@@ -215,7 +235,8 @@ export class Hud {
 
   private boardHtml(snap: Snapshot): string {
     const rows = snap.chars.map((c) => `<tr class="${c.id === this.myId ? 'me' : ''}"><td>${esc(c.name)}${c.bot ? ' <small>bot</small>' : ''}</td><td>${c.role === 'sitter' ? 'Sitter' : 'Cat'}</td></tr>`).join('');
-    return `<div class="board-title">Keep it under 100% until the owners are home.</div><table>${rows}</table>`;
+    const cat = snap.chars.find((c) => c.id === this.myId)?.role === 'cat';
+    return `<div class="board-title">${cat ? 'Get it to 100% before the owners are home.' : 'Keep it under 100% until the owners are home.'}</div><table>${rows}</table>`;
   }
 
   private updateAlerts(alerts: Alert[], me: CharState, cam: THREE.PerspectiveCamera, camYaw: number) {
@@ -261,7 +282,8 @@ export class Hud {
       if (hidden) { t.style.display = 'none'; continue; }
       _p.copy(head).project(cam);
       const d = cam.position.distanceTo(head);
-      if (_p.z > 1 || d > 14) { t.style.display = 'none'; continue; }
+      // the other team's names only where you could actually see them (no reading "Kevin" off a closed door)
+      if (_p.z > 1 || d > 14 || (c.role !== me.role && this.canSee && !this.canSee(cam.position, head))) { t.style.display = 'none'; continue; }
       t.style.display = 'block';
       t.style.transform = `translate(-50%, -100%) translate(${(_p.x * 0.5 + 0.5) * w}px, ${(-_p.y * 0.5 + 0.5) * h}px)`;
       t.style.opacity = String(Math.max(0.25, 1 - d / 14));
@@ -285,6 +307,6 @@ export class Hud {
     setTimeout(() => p.remove(), 1700);
   }
 
-  dispose() { this.root.remove(); }
+  dispose() { this.root.remove(); localUi.paused = false; window.removeEventListener('keydown', this.onKey); }
 }
 const _p = new THREE.Vector3();

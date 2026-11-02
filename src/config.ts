@@ -56,19 +56,30 @@ export const CFG = {
   clap: { range: 6, anim: 0.5, shock: 0.5 },
   // tapSpeed: the spec says 0.4 m/s for a 4-5 cm slide, but prop friction stops 0.4 after ~1 cm, 0.85 gives ~4.5 cm
   push: { hold: 0.25, speedMul: 0.3, tapEvery: 0.45, tapSpeed: 0.85, knockWindow: 2 },
-  panic: { on: 80, off: 78, mul: 1.25, sweatEvery: 2.5 },
-  overtime: { threshold: 90, max: 15, keysEvery: 3 },
+  // QA: panic keeps its face and sweat but no clean bonus (bot rounds stalled at 80-90%), overtime from 80%
+  panic: { on: 80, off: 78, mul: 1.0, sweatEvery: 2.5 },
+  overtime: { threshold: 80, max: 15, keysEvery: 3 },
+  /** QA: clutter weight starts at from x the scale row and reaches the full row after `over` seconds (time to settle in, a busy finish) */
+  clutterRamp: { from: 0.55, over: 150 },
+  /** QA: everything above is tuned for 6:00. Mess and disaster points scale by (360 / round seconds) ^ short|long, the clutter
+   *  ramp by the length, so 3 and 9 minute rounds stay a contest (all-bot House Cat without it: 3:00 0/12, 9:00 11/12 cat wins) */
+  roundLength: { short: 0.9, long: 0.4 },
+  /** TPS camera (src/client/camera.ts). dist: boom length, height: pivot above the feet, shoulder: pivot shift to the right, fov: vertical degrees */
   camera: {
-    cat: { dist: 2.1, height: 0.5, shoulder: 0.0, fov: 70, minDist: 0.4 },
-    sitter: { dist: 3.0, height: 1.6, shoulder: 0.5, fov: 65, minDist: 0.6 },
+    ceiling: 2.6, // the house's ceiling height: looking down sinks the pivot / shortens the boom under it
+    sens: 0.0022, // radians per mouse pixel
+    cat: { dist: 1.6, height: 0.5, shoulder: 0, fov: 68 }, // centred: the cat is small and there is no crosshair
+    sitter: { dist: 2.1, height: 1.4, shoulder: 0.7, fov: 62 }, // over the right shoulder, crosshair clear of the head, head to toe in the lower left
+    carried: { dist: 2.5, height: 0.25, shoulder: 0, fov: 66 }, // my cat dangling from the sitter's hand: the sitter is in the shot too
+    holding: { dist: 2.4, height: 1.4, shoulder: 0.75, fov: 64 }, // sitter holding a cat at arm's length
   },
-  /** ADDENDUM §3.2: indexed by cat count (bots included), fixed at round start. Index 0 unused. */
+  /** ADDENDUM §3.2 rows, retuned in QA from headless all-bot rounds (see design/REQUESTS.md). Indexed by cat count (bots included), fixed at round start. Index 0 unused. */
   scale: [
     null,
-    { clutter: 1.0, work: 0.85, carrierTime: 18, unlatch: 3.0, carrierCap: 1, sitterWalk: 3.0, sitterSprint: 5.2, ammo: 6, tv: 90, treats: 45, clap: 6, undo: 2.0, litter: 4 },
-    { clutter: 0.75, work: 1.0, carrierTime: 20, unlatch: 3.0, carrierCap: 1, sitterWalk: 3.0, sitterSprint: 5.2, ammo: 8, tv: 75, treats: 40, clap: 6, undo: 2.0, litter: 4 },
-    { clutter: 0.6, work: 1.2, carrierTime: 22, unlatch: 3.5, carrierCap: 2, sitterWalk: 3.1, sitterSprint: 5.4, ammo: 10, tv: 65, treats: 35, clap: 5, undo: 1.5, litter: 5 },
-    { clutter: 0.5, work: 1.4, carrierTime: 25, unlatch: 4.0, carrierCap: 2, sitterWalk: 3.2, sitterSprint: 5.5, ammo: 10, tv: 60, treats: 30, clap: 4, undo: 1.5, litter: 6 },
+    { clutter: 1.6, work: 0.6, carrierTime: 10, unlatch: 3.0, carrierCap: 1, sitterWalk: 3.0, sitterSprint: 5.2, ammo: 6, tv: 90, treats: 45, clap: 6, undo: 2.5, litter: 4 },
+    { clutter: 2.6, work: 0.5, carrierTime: 11, unlatch: 3.0, carrierCap: 1, sitterWalk: 3.0, sitterSprint: 5.2, ammo: 8, tv: 75, treats: 40, clap: 6, undo: 3.5, litter: 4 },
+    { clutter: 1.3, work: 0.85, carrierTime: 16, unlatch: 3.5, carrierCap: 2, sitterWalk: 3.05, sitterSprint: 5.25, ammo: 10, tv: 65, treats: 35, clap: 5, undo: 2.6, litter: 5 },
+    { clutter: 0.9, work: 1.1, carrierTime: 18, unlatch: 4.0, carrierCap: 2, sitterWalk: 3.1, sitterSprint: 5.3, ammo: 10, tv: 60, treats: 30, clap: 4, undo: 2.0, litter: 6 },
   ],
 } as const;
 

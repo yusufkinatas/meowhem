@@ -107,7 +107,8 @@ export class CatPreview {
     };
     this.cat.update(dt, s);
     this.cat.root.rotation.y = this.yaw;
-    this.camera.position.set(0, 0.4, 1.32 + chonk * 0.15);
+    // the vet cone is twice as wide as the head: step back so its rim stays in the frame
+    this.camera.position.set(0, 0.4, 1.32 + chonk * 0.15 + (this.look?.accessory === 'cone' ? 0.45 : 0));
     this.renderer.render(this.scene, this.camera);
   };
 }

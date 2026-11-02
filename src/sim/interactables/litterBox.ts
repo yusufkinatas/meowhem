@@ -53,7 +53,7 @@ defineInteractable<S>({
     },
     {
       // box full, or held it too long: anywhere goes
-      role: 'cat', mode: 'hold', time: P.hold, anim: 'poop', face: 'focused', label: 'Go right here', priority: -1,
+      role: 'cat', mode: 'hold', time: P.hold, anim: 'poop', face: 'focused', label: 'Go right here', priority: -3,
       at: (ctx, s, ch) => (ch.poop >= 1 && (s.fill >= s.cap || ch.desperate >= P.anywhereAfter) ? ch.p : null),
       onComplete(ctx, s, ch) {
         ctx.addMess('poop', ch.p, { by: ch.id });

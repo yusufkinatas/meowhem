@@ -58,20 +58,28 @@ class SitterBrain implements BotBrain {
   /** last time each cat was noticed (human-like awareness: room, distance, alerts) */
   private seen = new Map<string, number>();
   private lastAt = new Map<string, Vec3>();
+  /** a disaster just landed: stared at it, now busy with the mess for a while */
+  private shockSeen = false;
+  private messy = 0;
 
   constructor(o: BotBrainOpts) { this.D = BOT_DIFF[o.difficulty]; }
 
   think(v: BotWorldView, dt: number): BotIntent {
     const me = v.self, out: BotIntent = {};
-    if (me.frozen || me.forced || v.time < 1) return out; // a beat to look around at the start
+    if (me.frozen || me.forced || v.time < this.D.sReact * 2) return out; // a beat to look around at the start
     if (v.time - Number(v.world['scratchPost.t'] ?? -99) < 1) return out; // even the sitter stops and looks
     this.missT -= dt;
     this.sprayT -= dt;
     if (me.holding) { this.holdT += dt; return this.carry(v, dt, out); }
     this.holdT = 0;
     if (this.toss) return this.afterToss(v, out);
+    // a disaster landed: sometimes it just stands there, then gets busy with the damage instead of the cats
+    if (me.st.shock && !this.shockSeen) {
+      this.shockSeen = true;
+      if (v.rng() < this.D.sDistract) { this.start(v, { k: 'wait', score: 99, until: v.time + 0.8 + v.rng() * 0.8 }); this.messy = v.time + 6 + v.rng() * 6; }
+    } else if (!me.st.shock) this.shockSeen = false;
     if ((this.decideT -= dt) <= 0) {
-      this.decideT = this.D.react * (0.6 + v.rng() * 0.8);
+      this.decideT = this.D.sReact * (0.6 + v.rng() * 0.8);
       this.decide(v);
     }
     this.reflexes(v, out);
@@ -89,17 +97,18 @@ class SitterBrain implements BotBrain {
       if (c.st.caged) { this.lastAt.delete(c.id); continue; } // in the carrier: nothing to check on over there
       // a person only knows about cats they can see or hear, plus the alerts on the HUD
       const alerting = (c.work && DISASTERS.has(interKey(c.work.key))) || c.item === 'salmon';
-      if (alerting || v.roomAt(c.p) === myRoom || distXZ(c.p, me.p) < 5) { this.seen.set(c.id, v.time); this.lastAt.set(c.id, [...c.p]); }
+      if (alerting || v.roomAt(c.p) === myRoom || distXZ(c.p, me.p) < this.D.sHear) { this.seen.set(c.id, v.time); this.lastAt.set(c.id, [...c.p]); }
       if (v.time - (this.seen.get(c.id) ?? -99) > 4) continue;
       if (!this.grabbable(v, c) || (this.ignore.get(c.id) ?? 0) > v.time) continue;
       const k = c.work ? interKey(c.work.key) : '';
-      // a person goes after the cat doing damage; an idle cat only when it's right there
-      if (!c.work && !c.item && distXZ(c.p, me.p) > 6) continue;
+      // a person goes after the cat doing damage; an idle cat only when it's right there, and not in the first moments
+      if (!c.work && !c.item && (distXZ(c.p, me.p) > 6 || v.time < this.D.sGrace)) continue;
       let u = c.work && DISASTERS.has(k) ? 9 + 8 * c.work.progress : c.work ? 3.5 : 0.8;
       if (c.item === 'salmon') u = 10;
       if (c.loaf && v.mess.some((m) => distXZ(m.p, c.p) < 0.6)) u = Math.max(u, 3.5); // sitting on the mess
       if (c.st.eating) u += 4; // treat freeze: free grab
       if (c.p[1] > 0.5 && v.props.some((p) => !p.fallen && distXZ(p.p, c.p) < 0.8)) u = Math.max(u, 2.8); // about to sweep a surface
+      if (v.time < this.messy && !alerting) u *= 0.4;
       cands.push({ k: 'grab', id: c.id, score: u / near(c.p), until: v.time + 9 });
     }
     for (const o of v.options) {
@@ -109,7 +118,7 @@ class SitterBrain implements BotBrain {
     }
     for (const m of v.mess) {
       if (m.p[1] > 1.2 || (this.bad.get(`clean:${m.id}`) ?? 0) > v.time) continue;
-      cands.push({ k: 'clean', key: `clean:${m.id}`, at: m.p, score: (m.w * 1.1 + 0.4) / near(m.p), until: v.time + 12 });
+      cands.push({ k: 'clean', key: `clean:${m.id}`, at: m.p, score: ((m.w * 1.1 + 0.4) * (v.time < this.messy ? 1.5 : 1)) / near(m.p), until: v.time + 12 });
     }
     for (const p of v.props) {
       if (!p.fallen || p.special || p.p[1] > 1.2 || (this.bad.get(`tidy:${p.id}`) ?? 0) > v.time) continue;
@@ -136,7 +145,7 @@ class SitterBrain implements BotBrain {
       // M18: undo when it's > 0.3 along, no cat within 4 m, and it's within 6 m (no crossing the house for it)
       if (!D.undo || catNear(4) || distXZ(me.p, o.at) > 6) return 0;
       const p = o.progress ?? UNDO_PROGRESS[o.interactable]?.(v) ?? 0.5;
-      return p < 0.3 ? 0 : 6 + 7 * p;
+      return p < D.sUndoAt ? 0 : 6 + 7 * p;
     }
     switch (o.label) {
       case 'Turn off the tap': return 9 + (Number(v.world.flood ?? 0) > 0 ? 7 : 0);
@@ -238,15 +247,17 @@ class SitterBrain implements BotBrain {
         const d = distXZ(me.p, c.p);
         // give up on a chase that goes nowhere
         if (d < this.chaseBest - 0.3) { this.chaseBest = d; this.chaseT = 0; }
-        else if ((this.chaseT += dt) > (c.work ? 4 : 2.5)) { this.ignore.set(c.id, v.time + 6); return this.done(out); }
+        else if ((this.chaseT += dt) > (c.work ? 2 : 1) * this.D.sChase) { this.ignore.set(c.id, v.time + 6); return this.done(out); }
         if (d < CFG.grab.range - 0.25 && Math.abs(c.p[1] - me.p[1]) < 1.35) {
           // in reach but the grab keeps not happening (wedged, refused): try someone else
           if ((this.inRangeT += dt) > 2.5) { this.inRangeT = 0; this.ignore.set(c.id, v.time + 4); return this.done(out); }
           out.faceYaw = yawTo(me.p, c.p);
           if (d > 0.6) out.moveTo = c.p;
           if (this.missT <= 0 && facingDot(me.yaw, me.p, c.p) > 0.6) {
-            if (v.rng() < this.D.grab) out.interact = `grab:${c.id}`;
-            else this.missT = 0.5 + v.rng() * 0.4; // fumbled it
+            // keeps rounds close: sloppy while the house is still fine (full D.grab from 50%), and with only one or two cats to watch
+            const few = Math.min(1, 0.4 + 0.15 * v.chars.filter((x) => x.role === 'cat').length);
+            if (v.rng() < this.D.grab * few * Math.min(1, 0.6 + 0.8 * v.meter / 100)) out.interact = `grab:${c.id}`;
+            else this.missT = this.D.sFumble * (0.7 + v.rng() * 0.6); // fumbled it
           }
           return out;
         }

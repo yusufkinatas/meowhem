@@ -5,11 +5,13 @@
 import * as THREE from 'three';
 import { CSS2DRenderer, CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js';
 import { loadAssets, cloneModel, modelInfo, hasModel } from '../src/assets/loader';
-import { buildHouse } from '../src/world/level';
+import { buildHouse, PLACED } from '../src/world/level';
 import { createDevProp } from '../src/dev/devModels';
 import { createProp } from '../src/models/props';
+import { createCat } from '../src/models/cat';
+import { createSitter, SITTER_LOOKS } from '../src/models/sitter';
 import { PROP_DEFS } from '../src/shared/propDefs';
-import type { LevelData, Vec3 } from '../src/shared/contracts';
+import type { CatAnim, CatLook, CatVisualState, LevelData, PropKind, SitterVisualState, Vec3 } from '../src/shared/contracts';
 
 const q = new URLSearchParams(location.search);
 const flag = (k: string) => q.get(k) === '1';
@@ -192,14 +194,130 @@ function vcol(key: string, x: number, z: number) {
   return rc.intersectObject(m, true).map((h) => `${Math.round(h.point.y * 100)}${h.face && h.face.normal.y > 0 ? 'u' : 'd'}`).join(' ');
 }
 
+// ---------------------------------------------------------------- scale sheets: sitter + cat next to every model
+// ?sheet=furniture|props &frame=a,b (cells a..b, ortho, eye level) &side=1 (bed/sofa seen from the side) &col=1
+// in the house: ?sitter=x,z,yaw &cats=x,y,z,yaw[,anim];...
+const SHEET_SKIP = new Set(['window', 'tree', 'treeLarge', 'bush', 'fence', 'rug', 'rugRound', 'doormat', 'bathMat', 'curtains']);
+const catLook = (fur = '#f0a050'): CatLook => ({ name: 'c', pattern: 'tabby', furColor: fur, secondaryColor: '#b45a26', eyeColor: '#9ccf5a', accessory: 'none', chonk: 0.2 });
+const ticking: ((dt: number) => void)[] = [];
+function addSitter(x: number, z: number, yaw: number, y = 0) {
+  const m = createSitter(SITTER_LOOKS[0]);
+  m.root.position.set(x, y, z);
+  m.root.rotation.y = yaw;
+  scene.add(m.root);
+  const s: SitterVisualState = { anim: 'idle', face: 'neutral', speed: 0, vy: 0, grounded: true, carrying: false, flashlight: false, aimPitch: 0 };
+  ticking.push((dt) => m.update(dt, s));
+  return m;
+}
+function addCat(x: number, y: number, z: number, yaw: number, anim: CatAnim = 'idle', fur?: string) {
+  const c = createCat(catLook(fur));
+  c.root.position.set(x, y, z);
+  c.root.rotation.y = yaw;
+  scene.add(c.root);
+  const s: CatVisualState = { anim, face: 'neutral', speed: 0, vy: 0, grounded: true, wet: 0, puffed: false, high: false, talk: null };
+  ticking.push((dt) => c.update(dt, s));
+  return c;
+}
+const boxLines = (b: readonly (number | string | undefined)[], color: string) => boxLinesN(b as number[], color);
+const boxLinesN = (b: number[], color: string) => {
+  const m = new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.BoxGeometry(b[3] - b[0], b[4] - b[1], b[5] - b[2])), new THREE.LineBasicMaterial({ color, depthTest: false }));
+  m.position.set((b[0] + b[3]) / 2, (b[1] + b[4]) / 2, (b[2] + b[5]) / 2);
+  m.renderOrder = 40;
+  return m;
+};
+/** one cell per model: sitter | model | cat, returns the x extents of every cell */
+function sheet(kind: string): [number, number][] {
+  buildHouse(); // fills PLACED with the in-game scale/prep/colliders
+  const cells: [number, number][] = [];
+  let x = 0;
+  const side = flag('side');
+  if (kind === 'furniture') {
+    for (const [key, o] of PLACED) {
+      const info = modelInfo(key)!;
+      if (info.category === 'props' || SHEET_SKIP.has(key)) continue;
+      const m = cloneModel(key);
+      o.prep?.(m);
+      if (o.s !== undefined) typeof o.s === 'number' ? m.scale.setScalar(o.s) : m.scale.set(...o.s);
+      const yaw = side && ['bed', 'sofa', 'bathtub', 'armchair'].includes(key) ? -Math.PI / 2 : 0;
+      const g = new THREE.Group();
+      g.add(m);
+      if (flag('col') && Array.isArray(o.box)) for (const b of o.box) g.add(boxLines(b, b[6] === 'soft' ? '#ffb000' : b[6] === 'catOnly' ? '#3a7bff' : '#e0301e'));
+      g.rotation.y = yaw;
+      g.position.y = o.y ?? 0;
+      g.updateMatrixWorld(true);
+      const bb = new THREE.Box3().setFromObject(m);
+      const x0 = x;
+      addSitter(x + 0.3, 0, 0);
+      x += 0.75;
+      g.position.x = x - bb.min.x;
+      x += bb.max.x - bb.min.x + 0.15;
+      scene.add(g);
+      addCat(x + 0.17, 0, 0, Math.PI / 2);
+      x += 0.5;
+      label(`${key} ${Math.round((bb.max.y) * 100)}cm`, new THREE.Vector3((x0 + x) / 2, -0.12, 0.6));
+      cells.push([x0, x]);
+      x += 0.25;
+    }
+  } else {
+    for (const kind of Object.keys(PROP_DEFS) as PropKind[]) {
+      const x0 = x;
+      const s = addSitter(x + 0.3, 0, 0);
+      const inHand = createProp(kind);
+      s.root.updateMatrixWorld(true);
+      const hand = s.root.getObjectByName('handslotl');
+      if (hand) {
+        hand.add(inHand);
+        const ws = hand.getWorldScale(new THREE.Vector3());
+        inHand.scale.set(1 / ws.x, 1 / ws.y, 1 / ws.z);
+      }
+      const d = PROP_DEFS[kind];
+      const hy = d.shape === 'box' ? d.half![1] : d.shape === 'cyl' ? d.hh! : d.r!;
+      const hx = d.shape === 'box' ? d.half![0] : d.r!;
+      const p = createProp(kind);
+      p.position.set(x + 0.95, hy, 0.15);
+      if (flag('long')) p.rotation.y = Math.PI / 2; // long props (shoe, sock, remote) seen along their length
+      scene.add(p);
+      if (flag('col')) scene.add(boxLines([x + 0.95 - hx, 0, 0.15 - hx, x + 0.95 + hx, hy * 2, 0.15 + hx], '#e0301e'));
+      addCat(x + 0.95 + hx + 0.2, 0, 0, -Math.PI / 2);
+      x += 1.6;
+      label(kind, new THREE.Vector3((x0 + x) / 2, -0.08, 0.6));
+      cells.push([x0, x]);
+    }
+  }
+  const floorG = new THREE.Mesh(new THREE.PlaneGeometry(400, 40), new THREE.MeshToonMaterial({ color: '#e2c7a4' }));
+  floorG.rotation.x = -Math.PI / 2;
+  floorG.position.x = 180;
+  floorG.receiveShadow = true;
+  scene.add(floorG, new THREE.GridHelper(400, 4000, '#b08a6a', '#d8c2a8'));
+  return cells;
+}
+
 let level: LevelData | null = null;
-(window as any).__lv = { THREE, hm, vcol, scene, setCam, modelInfo, get level() { return level; } };
+(window as any).__lv = { THREE, hm, vcol, scene, setCam, modelInfo, cloneModel, PLACED, get level() { return level; } };
 
 async function main() {
   await loadAssets((p) => (hud.textContent = `loading ${Math.round(p * 100)}%`));
   const bench = q.get('model');
   const raw = q.get('raw'); // raw=path@heightMeters,... (paths under /assets-raw/)
-  if (raw) {
+  const sheetKind = q.get('sheet');
+  if (sheetKind) {
+    const cells = sheet(sheetKind);
+    const [a, b] = (q.get('frame') ?? `0,${cells.length - 1}`).split(',').map(Number);
+    const x0 = cells[Math.max(0, a)][0], x1 = cells[Math.min(cells.length - 1, b)][1];
+    const w = x1 - x0, asp = persp.aspect, top = Number(q.get('top2') ?? 2.35);
+    const half = Math.max(w / asp / 2, (top + 0.25) / 2);
+    Object.assign(ortho, { left: -half * asp, right: half * asp, top: half, bottom: -half });
+    ortho.updateProjectionMatrix();
+    ortho.up.set(0, 1, 0);
+    ortho.position.set((x0 + x1) / 2, top / 2 - 0.12, 20); // eye level, looking straight along -z
+    ortho.lookAt((x0 + x1) / 2, top / 2 - 0.12, 0);
+    camera = ortho;
+    sun.position.set((x0 + x1) / 2 - 4, 10, 10);
+    sun.target.position.set((x0 + x1) / 2, 0, 0);
+    Object.assign(sun.shadow.camera, { left: -w, right: w, top: 8, bottom: -8 });
+    sun.shadow.camera.updateProjectionMatrix();
+    hud.textContent = `sheet ${sheetKind}: ${cells.length} cells`;
+  } else if (raw) {
     const { GLTFLoader } = await import('three/addons/loaders/GLTFLoader.js');
     const ld = new GLTFLoader();
     let x = 0;
@@ -207,17 +325,21 @@ async function main() {
       const [path, h] = item.split('@');
       const g = (await ld.loadAsync('/assets-raw/' + path)).scene;
       const b = new THREE.Box3().setFromObject(g);
-      const s = Number(h) / (b.max.y - b.min.y);
+      // @z2.1 = fit the length instead of the height, @L2.1 = the longer horizontal side
+      const ax = h[0] === 'L' ? (b.max.x - b.min.x > b.max.z - b.min.z ? 'x' : 'z') : /^[xyz]/.test(h) ? h[0] as 'x' | 'y' | 'z' : 'y';
+      const s = parseFloat(h.replace(/^[xyzL]/, '')) / (b.max[ax] - b.min[ax]);
       g.scale.setScalar(s);
       const b2 = new THREE.Box3().setFromObject(g);
       g.position.set(x - b2.min.x, -b2.min.y, -(b2.min.z + b2.max.z) / 2);
       g.traverse((o) => { o.castShadow = o.receiveShadow = true; });
       scene.add(g);
-      label(path.split('/').pop()!, new THREE.Vector3(x + (b2.max.x - b2.min.x) / 2, Number(h) + 0.1, 0));
+      label(`${path.split('/').pop()} ${(b2.max.y - b2.min.y).toFixed(2)}`, new THREE.Vector3(x + (b2.max.x - b2.min.x) / 2, b2.max.y - b2.min.y + 0.1, 0));
       (window as any).__raw = [...((window as any).__raw ?? []), g];
       x += b2.max.x - b2.min.x + 0.4;
     }
     scene.add(new THREE.GridHelper(40, 400, '#b08a6a', '#d8c2a8'));
+    addSitter(-0.5, 0, 0);
+    addCat(-1.1, 0, 0, 0);
   } else if (bench) {
     const keys = bench === 'all' ? [] : bench.split(',');
     let x = 0;
@@ -240,6 +362,12 @@ async function main() {
     overlays(level);
     hud.textContent = `house: ${level.colliders.length} colliders, ${level.props.length} props, ${level.nav.nodes.length} nodes, ${level.nav.links.length} links`;
     if (q.get('doors')) for (const d of level.doors) level.setDoorOpen(d.id, Number(q.get('doors')));
+    const sp = q.get('sitter')?.split(',').map(Number);
+    if (sp) addSitter(sp[0], sp[1], sp[2] ?? 0);
+    for (const c of q.get('cats')?.split(';') ?? []) {
+      const v = c.split(',');
+      addCat(+v[0], +v[1], +v[2], +(v[3] ?? 0), (v[4] as CatAnim) ?? 'idle');
+    }
   }
   let last = performance.now();
   let frames = 0, acc = 0;
@@ -258,6 +386,7 @@ async function main() {
     if (keys.has('q')) persp.position.y -= sp;
     persp.rotation.set(pitch, yaw, 0, 'YXZ');
     level?.update(dt, now / 1000);
+    for (const f of ticking) f(dt);
     renderer.render(scene, camera);
     css.render(scene, camera);
     requestAnimationFrame(loop);

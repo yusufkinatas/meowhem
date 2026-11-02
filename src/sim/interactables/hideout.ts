@@ -8,9 +8,12 @@ import type { Char, SimContext } from './types';
 const CAP = 6, REENTRY = 10;
 type S = { t: Map<string, number>, until: Map<string, number> };
 
+/** cat centre under the bed frame (the bed's catOnly box, axis aligned), not a circle around the spot */
 const under = (ctx: SimContext, c: Char) => {
   const sp = ctx.spot('hideout');
-  return !c.forced && c.p[1] < 0.3 && distXZ(c.p, sp.pos) < sp.radius;
+  const b = ctx.level.colliders.find((k) => k.tag === 'catOnly' && Math.abs(sp.pos[0] - k.center[0]) < k.half[0] + 0.5 && Math.abs(sp.pos[2] - k.center[2]) < k.half[2] + 0.5);
+  if (c.forced || c.p[1] >= 0.3) return false;
+  return b ? Math.abs(c.p[0] - b.center[0]) < b.half[0] && Math.abs(c.p[2] - b.center[2]) < b.half[2] : distXZ(c.p, sp.pos) < sp.radius;
 };
 
 function slideOut(ctx: SimContext, c: Char) {

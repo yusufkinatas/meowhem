@@ -369,7 +369,7 @@ export class EndShow {
     const notes = r.awards.slice(0, 6).map((a, i) => `<div class="note${a.playerId === c.myId ? ' mine' : ''}" style="--bg:${colors[i % 6]};--mag:${magnets[(i + 2) % 6]};--r:${[-3, 2, -1.5, 3, -2.5, 1][i]}deg;animation-delay:${0.25 + i * 0.12}s">
         <div class="nt-title">${esc(a.title)}</div><div class="nt-name">${esc(a.name)}</div><div class="nt-desc">${esc(a.desc)}</div></div>`).join('');
     const again = c.isHost ? '<button class="btn primary" data-a="again">Again</button>' : '<span class="wait">The host decides what happens next</span>';
-    const lobby = `<button class="btn" data-a="lobby">${c.online && !c.isHost ? 'Leave' : 'Lobby'}</button>`;
+    const lobby = `<button class="btn" data-a="lobby">${!c.online ? 'Menu' : c.isHost ? 'Lobby' : 'Leave'}</button>`;
     this.board.innerHTML = `<div class="fridge ${r.winner}">
       <div class="fr-handle"></div>
       <div class="fr-head"><div class="fr-kicker">${r.winner === 'cat' ? 'Cats win' : 'Sitter wins'}</div><h1>${esc(r.headline)}</h1><div class="fr-sub">${esc(r.sub)}</div></div>

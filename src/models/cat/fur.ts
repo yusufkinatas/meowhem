@@ -219,15 +219,16 @@ function addOutlineNormals(g: THREE.BufferGeometry) {
 
 // ---------------------------------------------------------------- tail skinning
 const SEGS = [...TAIL_JOINTS, TAIL_TIP];
-const _q = new THREE.Vector3(), _s0 = new THREE.Vector3(), _s1 = new THREE.Vector3();
+// own scratch (_r): buildPart hands its shared _p to the uv callback, which calls tailParam(p) -> nearestSeg(p)
+const _q = new THREE.Vector3(), _r = new THREE.Vector3(), _s0 = new THREE.Vector3(), _s1 = new THREE.Vector3();
 /** nearest segment along the joint polyline: returns [segment index, t] */
 function nearestSeg(p: THREE.Vector3): [number, number] {
   let best = 1e9, bi = 0, bt = 0;
   for (let i = 0; i < SEGS.length - 1; i++) {
     _s0.set(...SEGS[i]); _s1.set(...SEGS[i + 1]);
     _q.subVectors(_s1, _s0);
-    const t = THREE.MathUtils.clamp(_p.copy(p).sub(_s0).dot(_q) / _q.lengthSq(), 0, 1);
-    const d = _p.copy(_s0).addScaledVector(_q, t).distanceToSquared(p);
+    const t = THREE.MathUtils.clamp(_r.copy(p).sub(_s0).dot(_q) / _q.lengthSq(), 0, 1);
+    const d = _r.copy(_s0).addScaledVector(_q, t).distanceToSquared(p);
     if (d < best) { best = d; bi = i; bt = t; }
   }
   return [bi, bt];
@@ -398,14 +399,20 @@ function patternColors(l: CatLook): [THREE.Color, THREE.Color] {
   const lf = lightness(f), ls = lightness(sc);
   const fur = new THREE.Color(f), sec = new THREE.Color(sc);
   const darker = (c: THREE.Color, k: number) => c.clone().multiplyScalar(k).lerp(new THREE.Color('#4a2c1c'), 0.15);
+  const white = new THREE.Color('#f7f2ea');
   switch (l.pattern) {
-    case 'tabby': return [fur, ls < lf - 0.08 ? sec : darker(fur, 0.5)];
+    // stripes need contrast: a barely darker secondary (white coat + beige) gets real stripes instead
+    case 'tabby': return [fur, ls < lf - 0.2 ? sec : darker(fur, 0.5)];
+    // dark coat + light bib; light coats become bicolors (ginger and white, blue and white), never a muddy darkened coat
     case 'tuxedo':
       if (Math.abs(lf - ls) >= 0.3) return lf < ls ? [fur, sec] : [sec, fur];
-      return lf < 0.5 ? [fur, new THREE.Color('#f7f2ea')] : [darker(fur, 0.28), fur];
-    case 'siamese':
-      if (Math.abs(lf - ls) >= 0.25) return lf > ls ? [fur, sec] : [sec, fur];
-      return [fur, darker(fur, 0.32)];
+      if (lf < 0.88) return [fur, white];
+      return [new THREE.Color('#8c8580'), fur];
+    // pale body, darker points: ginger + cream -> flame point, cocoa + cream -> chocolate point; a dark-only coat gets a pale body
+    case 'siamese': {
+      const [body, pts] = Math.abs(lf - ls) >= 0.15 ? (lf > ls ? [fur, sec] : [sec, fur]) : [fur, darker(fur, 0.32)];
+      return [Math.max(lf, ls) < 0.55 ? body.clone().lerp(white, 0.7) : body, pts];
+    }
     case 'calico': case 'tortie': {
       const a = lf > 0.72 ? new THREE.Color(l.pattern === 'calico' ? '#e8913f' : '#d9823b') : fur;
       const dark = Math.min(lf, ls) < 0.25 ? (lf < ls ? fur : sec) : new THREE.Color('#33292a');
